@@ -2,9 +2,8 @@
 (function (global) {
   'use strict';
 
-  function MultiSelectFilter({ label, options = [], selected = [], onChange, placeholder }) {
+  function MultiSelectFilter({ label, options, selected, onChange }) {
     const [open, setOpen] = React.useState(false);
-    const [search, setSearch] = React.useState("");
     const wrapRef = React.useRef(null);
 
     React.useEffect(() => {
@@ -17,53 +16,20 @@
       return () => document.removeEventListener("mousedown", handleOutsideClick);
     }, []);
 
-    // Normalize options (support array of strings or { value, label })
-    const items = React.useMemo(() => {
-      return (options || []).map((opt) => {
-        if (opt && typeof opt === "object" && opt.value !== undefined) {
-          return { value: opt.value, label: opt.label || String(opt.value) };
-        }
-        return { value: opt, label: String(opt) };
-      });
-    }, [options]);
-
-    const filteredItems = React.useMemo(() => {
-      if (!search.trim()) return items;
-      const q = search.toLowerCase();
-      return items.filter((it) => it.label.toLowerCase().includes(q) || String(it.value).toLowerCase().includes(q));
-    }, [items, search]);
-
-    const toggleOption = (val) => {
-      if (selected.includes(val)) {
-        onChange(selected.filter((s) => s !== val));
+    const toggleOption = (opt) => {
+      if (selected.includes(opt)) {
+        onChange(selected.filter((s) => s !== opt));
       } else {
-        onChange([...selected, val]);
+        onChange([...selected, opt]);
       }
     };
 
-    const handleSelectAll = () => {
-      onChange(items.map((it) => it.value));
-    };
-
-    const handleClearAll = () => {
-      onChange([]);
-    };
-
-    const allSelected = items.length > 0 && selected.length === items.length;
-    let summaryText = "";
-    if (allSelected) {
-      summaryText = `Tất cả (${items.length})`;
-    } else if (selected.length === 0) {
-      summaryText = "Chưa chọn mục nào";
-    } else if (selected.length === 1) {
-      const matched = items.find((it) => it.value === selected[0]);
-      summaryText = matched ? matched.label : String(selected[0]);
-      if (summaryText.length > 22) {
-        summaryText = summaryText.slice(0, 20) + "...";
-      }
-    } else {
-      summaryText = `${selected.length}/${items.length} đã chọn`;
-    }
+    const allSelected = selected.length === options.length;
+    const summaryText = allSelected
+      ? `Tất cả (${options.length})`
+      : selected.length === 0
+        ? "Không chọn mục nào"
+        : `${selected.length}/${options.length} đã chọn`;
 
     return React.createElement(
       "div",
@@ -72,15 +38,12 @@
         "button",
         {
           type: "button",
-          onClick: () => {
-            setOpen((o) => !o);
-            setSearch("");
-          },
+          onClick: () => setOpen((o) => !o),
           className:
-            "flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-slate-300 text-xs hover:bg-slate-50 transition cursor-pointer shadow-2xs whitespace-nowrap",
+            "flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-slate-300 text-xs hover:bg-slate-50 transition cursor-pointer",
         },
         React.createElement("span", { className: "font-semibold text-slate-600" }, label + ":"),
-        React.createElement("span", { className: "font-medium text-slate-900 max-w-[210px] truncate", title: summaryText }, summaryText),
+        React.createElement("span", { className: "font-medium text-slate-900" }, summaryText),
         React.createElement("span", { className: "text-slate-400 text-[8px]" }, "▼")
       ),
       open &&
@@ -88,40 +51,28 @@
           "div",
           {
             className:
-              "absolute z-50 mt-1 right-0 sm:right-auto sm:left-0 min-w-[250px] max-w-[340px] bg-white border border-slate-300 rounded-xl shadow-2xl p-2.5 text-xs animate-fadeIn",
+              "absolute z-50 mt-1 right-0 w-56 bg-white border border-slate-300 rounded-lg shadow-xl p-2 text-xs",
           },
-          // Search box if more than 4 items
-          items.length > 4 &&
-            React.createElement("div", { className: "mb-2" },
-              React.createElement("input", {
-                type: "text",
-                placeholder: "Tìm kiếm...",
-                value: search,
-                onChange: (e) => setSearch(e.target.value),
-                className:
-                  "w-full px-2.5 py-1 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-slate-50 text-slate-800",
-              })
-            ),
           React.createElement(
             "div",
             {
               className:
-                "flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-200 text-[11px]",
+                "flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-200",
             },
             React.createElement(
               "button",
               {
                 type: "button",
-                onClick: handleSelectAll,
+                onClick: () => onChange(options),
                 className: "text-blue-600 hover:underline font-semibold cursor-pointer",
               },
-              "Chọn tất cả (" + items.length + ")"
+              "Chọn tất cả"
             ),
             React.createElement(
               "button",
               {
                 type: "button",
-                onClick: handleClearAll,
+                onClick: () => onChange([]),
                 className: "text-slate-500 hover:underline font-semibold cursor-pointer",
               },
               "Bỏ chọn hết"
@@ -129,38 +80,28 @@
           ),
           React.createElement(
             "div",
-            { className: "max-h-60 overflow-y-auto space-y-0.5 pr-1" },
-            filteredItems.length === 0
-              ? React.createElement("div", { className: "py-3 text-center text-slate-400 text-xs" }, "Không tìm thấy kết quả")
-              : filteredItems.map((it) =>
-                  React.createElement(
-                    "label",
-                    {
-                      key: String(it.value),
-                      className:
-                        "flex items-center gap-2 px-2 py-1 rounded-md hover:bg-slate-50 cursor-pointer select-none text-slate-800 transition",
-                    },
-                    React.createElement("input", {
-                      type: "checkbox",
-                      checked: selected.includes(it.value),
-                      onChange: () => toggleOption(it.value),
-                      className: "accent-blue-600 cursor-pointer rounded shrink-0",
-                    }),
-                    React.createElement(
-                      "span",
-                      { className: "truncate text-xs text-slate-800", title: it.label },
-                      it.label
-                    )
-                  )
-                )
+            { className: "max-h-56 overflow-y-auto space-y-0.5" },
+            options.map((opt) =>
+              React.createElement(
+                "label",
+                {
+                  key: opt,
+                  className:
+                    "flex items-center gap-2 px-1.5 py-1 rounded hover:bg-slate-50 cursor-pointer select-none",
+                },
+                React.createElement("input", {
+                  type: "checkbox",
+                  checked: selected.includes(opt),
+                  onChange: () => toggleOption(opt),
+                  className: "accent-blue-600 cursor-pointer",
+                }),
+                React.createElement("span", { className: "text-slate-800" }, opt)
+              )
+            )
           )
         )
     );
   }
-
-  // Export MultiSelectFilter for other modules
-  global.SAM_COMPONENTS = global.SAM_COMPONENTS || {};
-  global.SAM_COMPONENTS.MultiSelectFilter = MultiSelectFilter;
 
   function ExecutiveReportModal(props) {
     const {
@@ -214,16 +155,10 @@
     const standardTitle = `${(catalogInfo && catalogInfo.name) || 'Hachihi SAM Standard'} v${(catalogInfo && catalogInfo.version) || '2026.09'}`;
 
     // State for 6. PER_DEVICE_AUDIT (Báo cáo theo từng máy)
-    const [selectedDeviceHostnames, setSelectedDeviceHostnames] = React.useState([]);
+    const [selectedDeviceHostname, setSelectedDeviceHostname] = React.useState("ALL");
     const [perDeviceVendorFilter, setPerDeviceVendorFilter] = React.useState([]);
     const [perDeviceLicenseFilter, setPerDeviceLicenseFilter] = React.useState([]);
     const [compactHardware, setCompactHardware] = React.useState(true);
-
-    React.useEffect(() => {
-      if (computers && computers.length > 0 && selectedDeviceHostnames.length === 0) {
-        setSelectedDeviceHostnames(computers.map((c) => c.hostname));
-      }
-    }, [computers]);
 
     const allDeviceVendors = React.useMemo(() => {
       const set = new Set();
@@ -287,13 +222,6 @@
       const diskText = comp.disk || "1TB SSD / Tốc độ cao";
       const modelText = brandModelDisplay;
 
-      let oneLineSummary = "";
-      if (model && (model.includes("CPU:") || model.includes("|"))) {
-        oneLineSummary = model.replace(/;\s*\|/g, " • ").replace(/\|\s*/g, " • ").trim();
-      } else {
-        oneLineSummary = `${brandModelDisplay} • CPU: ${cpuText} • RAM: ${ramText} • Ổ cứng: ${diskText}`;
-      }
-
       return {
         stt,
         hostname,
@@ -305,7 +233,7 @@
         ramText,
         diskText,
         modelText,
-        oneLineSummary
+        oneLineSummary: `${brandModelDisplay} • CPU: ${cpuText} • RAM: ${ramText} • Ổ cứng: ${diskText}`
       };
     };
 
@@ -314,13 +242,13 @@
       {
         id: "print-modal-root",
         className:
-          "fixed inset-0 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-1 sm:p-2.5 z-50 animate-fadeIn print-modal-backdrop",
+          "fixed inset-0 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 z-50 animate-fadeIn print-modal-backdrop",
       },
       React.createElement(
         "div",
         {
           className:
-            "bg-white rounded-2xl w-full max-w-[98vw] 2xl:max-w-[1780px] max-h-[98vh] flex flex-col shadow-2xl overflow-hidden border border-slate-300 print-modal-container",
+            "bg-white rounded-2xl max-w-6xl w-full max-h-[96vh] flex flex-col shadow-2xl overflow-hidden border border-slate-300 print-modal-container",
         },
         // Modal Header Bar (hidden in print)
         React.createElement(
