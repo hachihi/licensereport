@@ -1,0 +1,6 @@
+{
+  "name": "Hachihi SAM Pro",
+  "description": "Hệ thống kiểm toán và tối ưu hóa bản quyền phần mềm doanh nghiệp, đối soát hóa đơn VAT và kế hoạch FOSS chạy hoàn toàn client-side.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

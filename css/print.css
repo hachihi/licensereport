@@ -1,0 +1,97 @@
+/* css/print.css - Specialized Print Media Formatting */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 8mm 10mm 8mm;
+  }
+
+  html, body {
+    background: white !important;
+    color: #0f172a !important;
+    font-size: 9pt !important;
+    line-height: 1.35 !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.has-print-modal > #root > div > *:not(#print-modal-root),
+  body.has-print-modal header,
+  body.has-print-modal main,
+  body.has-print-modal footer,
+  .no-print,
+  .print-hidden {
+    display: none !important;
+  }
+
+  #print-modal-root,
+  .print-modal-backdrop,
+  .print-modal-container {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    font-size: 8pt !important;
+  }
+
+  th, td {
+    padding: 3.5px 4.5px !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+    border-color: #94a3b8 !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-page-break {
+    page-break-before: always !important;
+    break-before: page !important;
+    height: 0 !important;
+    margin: 0 !important;
+  }
+
+  .bg-slate-900 {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+}
