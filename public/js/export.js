@@ -321,6 +321,41 @@
     downloadCatalogOnly(catalogRules, { name: "Hachihi SAM Standard", version: "2026.09" });
   }
 
+  function exportSoftwareCatalogJSON(catalogRules, catalogInfo) {
+    const data = {
+      info: catalogInfo || {
+        name: "Hachihi SAM Standard",
+        version: "2026.09",
+        updated: new Date().toLocaleDateString("vi-VN"),
+        author: "Hachihi SAM Auditor",
+        description: "Danh mục quy tắc nhận diện bản quyền phần mềm doanh nghiệp"
+      },
+      rules: (catalogRules || []).map((r, idx) => ({
+        id: r.id || ("rule_" + idx + "_" + (r.name || "").toLowerCase().replace(/[^a-z0-9]/g, "")),
+        name: r.name,
+        keywords: Array.isArray(r.keywords) ? r.keywords.join(", ") : (r.pattern || r.keywords || ""),
+        vendor: r.vendor || "Chưa rõ",
+        category: r.category || "Văn phòng",
+        licenseType: r.licenseType || "COMMERCIAL_PAID",
+        auditRisk: r.auditRisk || r.risk || "HIGH",
+        suggestedAction: r.suggestedAction || (r.licenseType === "FREE_OPEN_SOURCE" ? "ALLOW_FREE" : "VERIFY_INVOICE"),
+        actionDetails: r.actionDetails || r.action || "",
+        recommendedAlternative: r.recommendedAlternative || r.foss || "",
+        estimatedPriceVND: r.estimatedPriceVND !== undefined ? r.estimatedPriceVND : (r.price || 0),
+        isTrap: (r.isTrap === true || r.isTrap === "Có" || r.licenseType === "FREE_PERSONAL_ONLY") ? "Có" : "Không"
+      }))
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "software_catalog.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   function generateSampleExcelTemplate() {
     downloadTemplate3Sheets();
   }
@@ -332,6 +367,7 @@
     exportExecutiveReport,
     exportDetailedMachines,
     exportSoftwareCatalog,
+    exportSoftwareCatalogJSON,
     generateSampleExcelTemplate
   };
 

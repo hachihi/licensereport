@@ -72,19 +72,19 @@
       setInstallations(processed);
       setCatalogRules(initialRules);
 
-      // 3. Try to fetch external ./data/software_catalog.xlsx (Online GitHub Pages mode)
-      CATALOG_LOADER.loadCatalogFromURL('./data/software_catalog.xlsx')
+      // 3. Try to fetch external catalog (Auto-detects ./data/software_catalog.json or ./data/software_catalog.xlsx)
+      CATALOG_LOADER.loadCatalogFromURL()
         .then((result) => {
           if (result && result.rules && result.rules.length > 0) {
             setCatalogRules(result.rules);
-            setCatalogSource('REMOTE_EXCEL');
+            setCatalogSource(result.format === 'JSON' ? 'REMOTE_JSON' : 'REMOTE_EXCEL');
             if (result.info) setCatalogInfo(result.info);
             // Re-audit default data with fetched catalog
             setInstallations((prev) => AUDIT_ENGINE.processInstallations(defaultInsts, result.rules));
           }
         })
         .catch((err) => {
-          console.warn("Could not fetch ./data/software_catalog.xlsx, using embedded fallback catalog.", err);
+          console.warn("Could not fetch remote catalog (json/xlsx), using embedded fallback catalog.", err);
           setFallbackBanner(true);
           setCatalogSource('DEFAULT_EMBEDDED');
         });
@@ -137,7 +137,10 @@
 
     // Machine Overview Rows
     const machineOverviewRows = useMemo(() => {
-      return AUDIT_ENGINE.generateMachineOverviewRows(computers, installations);
+      if (typeof AUDIT_ENGINE.generateMachineOverviewRows === 'function') {
+        return AUDIT_ENGINE.generateMachineOverviewRows(computers, installations);
+      }
+      return [];
     }, [computers, installations]);
 
     // Detail filtered installs
@@ -335,6 +338,59 @@
       });
     };
 
+    // Update existing catalog rule freely (any field)
+    const handleUpdateRule = (index, updatedFields) => {
+      const updated = [...catalogRules];
+      if (!updated[index]) return;
+      const merged = { ...updated[index], ...updatedFields };
+
+      // Ensure consistent keywords and patterns
+      if (typeof merged.keywords === 'string') {
+        merged.keywords = merged.keywords.split(/[,;\n]+/).map((k) => k.trim().toLowerCase()).filter(Boolean);
+      }
+      if (Array.isArray(merged.keywords) && !merged.pattern) {
+        merged.pattern = merged.keywords.join(', ');
+      }
+      if (merged.licenseType === 'FREE_OPEN_SOURCE') {
+        merged.price = 0;
+        merged.estimatedPriceVND = 0;
+        merged.auditRisk = 'LOW';
+        merged.isTrap = false;
+        merged.suggestedAction = 'ALLOW_FREE';
+      }
+
+      updated[index] = merged;
+      setCatalogRules(updated);
+      setCatalogSource('CUSTOM_FILE');
+
+      if (rawInventory.length > 0) {
+        const reaudited = AUDIT_ENGINE.processInstallations(rawInventory, updated);
+        setInstallations(reaudited);
+      }
+
+      setUploadStatus({
+        message: `Đã cập nhật quy tắc cho "${merged.name}". Số liệu báo cáo đã được tự động tính lại.`,
+        type: 'success',
+      });
+    };
+
+    // Quick action: Assign Free / FOSS (0đ) to a catalog rule
+    const handleAssignFree = (index) => {
+      const target = catalogRules[index];
+      if (!target) return;
+      handleUpdateRule(index, {
+        licenseType: 'FREE_OPEN_SOURCE',
+        auditRisk: 'LOW',
+        price: 0,
+        estimatedPriceVND: 0,
+        isTrap: false,
+        suggestedAction: 'ALLOW_FREE',
+        recommendedAlternative: target.recommendedAlternative || target.foss || 'Chuẩn FOSS tối ưu',
+        foss: target.recommendedAlternative || target.foss || 'Chuẩn FOSS tối ưu',
+        actionDetails: 'Mã nguồn mở / Freeware, được phép dùng miễn phí cho doanh nghiệp (0đ, 0 rủi ro).'
+      });
+    };
+
     // Export Excel Handlers
     const handleExportExecutive = () => {
       EXPORTER.exportExecutiveReport(executivePlanRows, metrics, clientName, auditDate);
@@ -346,6 +402,12 @@
 
     const handleExportCatalog = () => {
       EXPORTER.exportSoftwareCatalog(catalogRules);
+    };
+
+    const handleExportCatalogJSON = () => {
+      if (EXPORTER.exportSoftwareCatalogJSON) {
+        EXPORTER.exportSoftwareCatalogJSON(catalogRules, catalogInfo);
+      }
     };
 
     const handleDownloadTemplate = () => {
@@ -653,10 +715,13 @@
             catalogSource,
             catalogInfo,
             onAddRule: handleAddRule,
+            onUpdateRule: handleUpdateRule,
+            onAssignFree: handleAssignFree,
             onDeleteRule: handleDeleteRule,
             onResetCatalog: handleResetCatalog,
             onUploadCatalogFile: handleCatalogUpload,
             onExportCatalog: handleExportCatalog,
+            onExportCatalogJSON: handleExportCatalogJSON,
             onDownloadTemplate: handleDownloadTemplate,
             formatVND: UTILS.formatVND || ((v) => `${v} ₫`),
           })

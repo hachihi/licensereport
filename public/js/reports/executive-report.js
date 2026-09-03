@@ -138,6 +138,13 @@
 
     if (!show) return null;
 
+    React.useEffect(() => {
+      document.body.classList.add('has-print-modal');
+      return () => {
+        document.body.classList.remove('has-print-modal');
+      };
+    }, []);
+
     const utils = global.SAM_UTILS || {};
     const printUtils = global.SAM_PRINT || {};
     const constants = global.SAM_CONSTANTS || {};
@@ -165,7 +172,7 @@
           "div",
           {
             className:
-              "p-4 bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-blue-950/50 print-hidden no-print",
+              "p-4 bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-blue-950/50 print-hidden no-print print-modal-header",
           },
           React.createElement(
             "div",
@@ -298,7 +305,7 @@
           "div",
           {
             className:
-              "bg-slate-100 px-6 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-700 print-hidden no-print",
+              "bg-slate-100 px-6 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-700 print-hidden no-print print-modal-controls",
           },
           React.createElement(
             "div",
@@ -424,7 +431,7 @@
           "div",
           {
             className:
-              "flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-50 text-slate-900 font-sans print:p-0 print:bg-white print:overflow-visible",
+              "flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-50 text-slate-900 font-sans print:p-0 print:bg-white print:overflow-visible print-report-body",
           },
           // 1. EXECUTIVE PLAN
           (reportType === "EXECUTIVE_PLAN" || reportType === "BOTH") &&

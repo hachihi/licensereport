@@ -32,12 +32,16 @@
     const targetTitle = getDocumentTitleForPrint(type, clientName, auditDate);
     document.title = targetTitle;
 
+    document.body.classList.add('has-print-modal');
+    document.body.classList.add('is-printing-report');
+
     setTimeout(() => {
       window.print();
       setTimeout(() => {
         document.title = originalTitle;
+        document.body.classList.remove('is-printing-report');
       }, 1000);
-    }, 50);
+    }, 150);
   }
 
   global.SAM_PRINT = {

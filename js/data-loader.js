@@ -100,6 +100,10 @@
           os: getVal(row, ["os", "hệ điều hành", "windows"]),
           model: getVal(row, ["model", "cấu hình", "dòng máy"]),
           serial: getVal(row, ["serial", "số serial", "serial number", "s/n"]) || "N/A",
+          manufacturer: getVal(row, ["hãng", "nhà sản xuất", "manufacturer", "brand", "make"]),
+          cpu: getVal(row, ["cpu", "vi xử lý", "processor"]),
+          ram: getVal(row, ["ram", "bộ nhớ", "memory"]),
+          disk: getVal(row, ["ổ cứng", "disk", "storage", "ssd", "hdd"]),
         };
         compMap.set(norm, compObj);
         newComputers.push(compObj);
@@ -184,6 +188,10 @@
               os: getVal(row, ["os", "hệ điều hành"]),
               model: getVal(row, ["model", "cấu hình"]),
               serial: getVal(row, ["serial", "số serial", "serial number", "s/n"]) || "N/A",
+              manufacturer: getVal(row, ["hãng", "nhà sản xuất", "manufacturer", "brand", "make"]),
+              cpu: getVal(row, ["cpu", "vi xử lý", "processor"]),
+              ram: getVal(row, ["ram", "bộ nhớ", "memory"]),
+              disk: getVal(row, ["ổ cứng", "disk", "storage", "ssd", "hdd"]),
             };
             compMap.set(norm, compObj);
             newComputers.push(compObj);
@@ -235,12 +243,25 @@
       computers: newComputers,
       installations: newInstalls,
       detectedCatalogRules,
+      sheet3Rules: detectedCatalogRules,
       catalogSheetName
     };
   }
 
+  /**
+   * Reads inventory File object and parses workbook
+   */
+  async function loadInventoryFile(file, activeCatalog) {
+    if (!file) {
+      throw new Error('Vui lòng chọn tập tin kiểm kê hợp lệ (.xlsx, .xls, .csv)');
+    }
+    const buffer = await file.arrayBuffer();
+    return parseInventoryWorkbook(buffer, activeCatalog);
+  }
+
   global.SAM_DATA_LOADER = {
-    parseInventoryWorkbook
+    parseInventoryWorkbook,
+    loadInventoryFile
   };
 
 })(typeof window !== 'undefined' ? window : this);

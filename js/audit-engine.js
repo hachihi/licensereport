@@ -266,13 +266,74 @@
     });
   }
 
+  /**
+   * Generates summary rows for each computer in the audit
+   */
+  function generateMachineOverviewRows(computers, installations) {
+    const compMap = new Map();
+
+    (computers || []).forEach((c, idx) => {
+      const host = String(c.hostname || c.id || `PC_${idx + 1}`).trim();
+      const norm = host.toUpperCase();
+      compMap.set(norm, {
+        stt: idx + 1,
+        hostname: host,
+        model: c.model || c.systemType || "N/A",
+        user: c.assignedUser || c.user || c.userName || "Chưa gán",
+        department: c.department || "Chưa xác định",
+        serial: c.serialNumber || c.serial || "N/A",
+        softwareCount: 0,
+        hasWarning: false,
+      });
+    });
+
+    (installations || []).forEach((inst) => {
+      const host = String(inst.computerHostname || "Unknown_PC").trim();
+      const norm = host.toUpperCase();
+      if (!compMap.has(norm)) {
+        compMap.set(norm, {
+          stt: compMap.size + 1,
+          hostname: host,
+          model: "N/A",
+          user: inst.userName || "Chưa gán",
+          department: inst.department || "Chưa xác định",
+          serial: "N/A",
+          softwareCount: 0,
+          hasWarning: false,
+        });
+      }
+
+      const machine = compMap.get(norm);
+      machine.softwareCount++;
+
+      const isRisky =
+        (inst.invoiceStatus === "MISSING_INVOICE" && inst.licenseType !== "FREE_OPEN_SOURCE") ||
+        inst.licenseType === "FREE_PERSONAL_ONLY" ||
+        inst.isTrap ||
+        inst.auditRisk === "CRITICAL" ||
+        inst.auditRisk === "HIGH";
+
+      if (isRisky) {
+        machine.hasWarning = true;
+      }
+    });
+
+    return Array.from(compMap.values());
+  }
+
+  function processInstallations(installations, catalogList) {
+    return applyCatalogToInstallations(installations, catalogList);
+  }
+
   global.SAM_AUDIT_ENGINE = {
     matchSoftwareWithCatalog,
     applyCatalogToInstallations,
+    processInstallations,
     groupSoftware,
     calculateMetrics,
     calculateKpiBreakdown,
-    generateExecutivePlanRows
+    generateExecutivePlanRows,
+    generateMachineOverviewRows
   };
 
 })(typeof window !== 'undefined' ? window : this);

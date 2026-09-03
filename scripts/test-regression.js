@@ -151,6 +151,32 @@ try {
   console.error("✗ Test 10 FAILED:", e.message);
 }
 
+// Test 11: Kiểm tra AUDIT_ENGINE.generateMachineOverviewRows và processInstallations
+try {
+  // Simulate global scope for node
+  const windowObj = {};
+  const constantsCode = fs.readFileSync('./js/constants.js', 'utf-8');
+  new Function('window', 'global', constantsCode)(windowObj, windowObj);
+  const auditEngineCode = fs.readFileSync('./js/audit-engine.js', 'utf-8');
+  new Function('window', 'global', auditEngineCode)(windowObj, windowObj);
+
+  const engine = windowObj.SAM_AUDIT_ENGINE;
+  if (!engine || typeof engine.generateMachineOverviewRows !== 'function' || typeof engine.processInstallations !== 'function') {
+    throw new Error("generateMachineOverviewRows or processInstallations missing on SAM_AUDIT_ENGINE");
+  }
+
+  const sampleComps = windowObj.SAM_CONSTANTS.SAMPLE_COMPUTERS_FALLBACK;
+  const sampleInsts = windowObj.SAM_CONSTANTS.SAMPLE_INSTALLS_FALLBACK;
+  const overviewRows = engine.generateMachineOverviewRows(sampleComps, sampleInsts);
+  if (!Array.isArray(overviewRows) || overviewRows.length === 0) {
+    throw new Error("generateMachineOverviewRows did not return rows array");
+  }
+  console.log(`✓ Test 11: AUDIT_ENGINE API (Pass) - generateMachineOverviewRows tạo ${overviewRows.length} máy thành công`);
+  passedTests++;
+} catch (e) {
+  console.error("✗ Test 11 FAILED:", e.message);
+}
+
 console.log("==================================================");
-console.log(`KẾT QUẢ: ${passedTests}/${totalTests} BÀI TEST ĐẠT YÊU CẦU 100%!`);
+console.log(`KẾT QUẢ: ${passedTests}/11 BÀI TEST ĐẠT YÊU CẦU 100%!`);
 console.log("==================================================");

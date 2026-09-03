@@ -96,11 +96,13 @@
       let licenseType = 'COMMERCIAL_PAID';
       let isTrap = false;
 
-      if (rawType.includes('free') || rawType.includes('foss') || rawType.includes('mien phi') || rawType.includes('open source')) {
-        licenseType = 'FREE_OPEN_SOURCE';
-      } else if (rawType.includes('ca nhan') || rawType.includes('personal') || rawType.includes('bay') || isTrapVal === 'co' || isTrapVal === 'yes' || isTrapVal === 'true') {
+      if (rawType.includes('ca nhan') || rawType.includes('personal') || rawType.includes('bay') || isTrapVal === 'co' || isTrapVal === 'yes' || isTrapVal === 'true' || rawType === 'free_personal_only') {
         licenseType = 'FREE_PERSONAL_ONLY';
         isTrap = true;
+      } else if (rawType.includes('foss') || rawType.includes('open source') || rawType.includes('mien phi') || rawType === 'free_open_source' || (rawType.includes('free') && !rawType.includes('personal') && !rawType.includes('ca nhan'))) {
+        licenseType = 'FREE_OPEN_SOURCE';
+      } else {
+        licenseType = 'COMMERCIAL_PAID';
       }
 
       const id = getVal(r, ['id', 'mã', 'code']) || ('rule_' + idx + '_' + name.toLowerCase().replace(/[^a-z0-9]/g, ''));
@@ -161,24 +163,132 @@
   }
 
   /**
-   * Online mode: fetch catalog from relative URL
+   * Parses JSON catalog string/object into standardized rules and info
+   */
+  function parseCatalogJSON(jsonContent) {
+    const data = typeof jsonContent === 'string' ? JSON.parse(jsonContent) : jsonContent;
+    const rawRules = Array.isArray(data) ? data : (data.rules || []);
+    const info = (!Array.isArray(data) && data.info) ? data.info : {
+      name: 'Hachihi SAM Standard',
+      version: '2026.09',
+      updated: '03/09/2026',
+      author: 'Hachihi',
+      description: 'Danh mục tiêu chuẩn bản quyền (JSON)'
+    };
+
+    const rules = rawRules.map((r, idx) => {
+      const name = String(r.name || r['Tên phần mềm'] || '').trim();
+      const rawKw = r.keywords || r.pattern || r['Từ khóa'] || name.toLowerCase();
+      const keywords = Array.isArray(rawKw)
+        ? rawKw.map(k => String(k).trim().toLowerCase()).filter(Boolean)
+        : String(rawKw).split(/[,;\n]+/).map(k => k.trim().toLowerCase()).filter(Boolean);
+
+      const rawType = String(r.licenseType || r['Loại bản quyền'] || '').toUpperCase();
+      let licenseType = 'COMMERCIAL_PAID';
+      if (rawType === 'FREE_PERSONAL_ONLY' || rawType.includes('PERSONAL') || rawType.includes('CÁ NHÂN') || rawType.includes('CA NHAN') || rawType.includes('BẪY') || rawType.includes('BAY') || r.isTrap === true || r.isTrap === 'Có') {
+        licenseType = 'FREE_PERSONAL_ONLY';
+      } else if (rawType === 'FREE_OPEN_SOURCE' || rawType.includes('FOSS') || rawType.includes('OPEN') || rawType.includes('MIỄN PHÍ') || rawType.includes('MIEN PHI') || (rawType.includes('FREE') && !rawType.includes('PERSONAL'))) {
+        licenseType = 'FREE_OPEN_SOURCE';
+      } else {
+        licenseType = 'COMMERCIAL_PAID';
+      }
+
+      const rawRisk = String(r.auditRisk || r.risk || r['Rủi ro'] || '').toUpperCase();
+      let auditRisk = 'HIGH';
+      if (licenseType === 'FREE_OPEN_SOURCE') {
+        auditRisk = 'LOW';
+      } else if (rawRisk.includes('CRITICAL') || rawRisk.includes('NGHIÊM TRỌNG')) {
+        auditRisk = 'CRITICAL';
+      } else if (rawRisk.includes('MEDIUM') || rawRisk.includes('TRUNG BÌNH')) {
+        auditRisk = 'MEDIUM';
+      } else if (rawRisk.includes('LOW') || rawRisk.includes('THẤP')) {
+        auditRisk = 'LOW';
+      }
+
+      const priceVal = r.estimatedPriceVND !== undefined ? r.estimatedPriceVND : (r.price || r['Đơn giá'] || 0);
+      const estimatedPriceVND = licenseType === 'FREE_OPEN_SOURCE' ? 0 : (Number(priceVal) || 0);
+
+      const isTrap = licenseType === 'FREE_PERSONAL_ONLY' || r.isTrap === true || r.isTrap === 'Có' || r.isTrap === 'yes';
+
+      return {
+        id: r.id || ('rule_' + idx + '_' + name.toLowerCase().replace(/[^a-z0-9]/g, '')),
+        name: name || `Quy tắc ${idx + 1}`,
+        pattern: keywords.join(', '),
+        keywords: keywords.length > 0 ? keywords : [name.toLowerCase()],
+        vendor: r.vendor || r['Hãng'] || 'Chưa rõ',
+        category: r.category || r['Nhóm'] || 'Văn phòng',
+        licenseType,
+        auditRisk,
+        suggestedAction: r.suggestedAction || (licenseType === 'FREE_OPEN_SOURCE' ? 'ALLOW_FREE' : (licenseType === 'FREE_PERSONAL_ONLY' ? 'REPLACE_WITH_FOSS' : 'VERIFY_INVOICE')),
+        actionDetails: r.actionDetails || r.action || r['Ghi chú'] || (licenseType === 'FREE_OPEN_SOURCE' ? 'Miễn phí cho DN.' : 'Cần hóa đơn VAT hợp lệ.'),
+        recommendedAlternative: r.recommendedAlternative || r.foss || r['Đề xuất FOSS'] || (licenseType === 'FREE_OPEN_SOURCE' ? 'Chuẩn FOSS' : 'FOSS Thay thế'),
+        foss: r.recommendedAlternative || r.foss || (licenseType === 'FREE_OPEN_SOURCE' ? 'Chuẩn FOSS' : 'FOSS Thay thế'),
+        price: estimatedPriceVND,
+        estimatedPriceVND,
+        isTrap
+      };
+    }).filter(r => r.name);
+
+    return {
+      rules,
+      info,
+      format: 'JSON'
+    };
+  }
+
+  /**
+   * Online mode: fetch catalog from relative URL.
+   * Smart loader: Automatically checks ./data/software_catalog.json first (easier to edit directly on GitHub),
+   * then falls back to ./data/software_catalog.xlsx.
    */
   async function loadCatalogFromURL(url) {
-    const targetUrl = url || './data/software_catalog.xlsx';
-    const response = await fetch(targetUrl, { cache: 'no-cache' });
-    if (!response.ok) {
-      throw new Error(`Không thể tải Catalog từ URL: ${targetUrl} (Mã lỗi: ${response.status})`);
+    // If specific URL requested, load that format directly
+    if (url) {
+      const response = await fetch(url, { cache: 'no-cache' });
+      if (!response.ok) {
+        throw new Error(`Không thể tải Catalog từ URL: ${url} (Mã lỗi: ${response.status})`);
+      }
+      if (url.endsWith('.json')) {
+        const text = await response.text();
+        return parseCatalogJSON(text);
+      }
+      const buffer = await response.arrayBuffer();
+      return parseCatalogWorkbook(buffer);
     }
-    const buffer = await response.arrayBuffer();
+
+    // Default dual strategy: Try JSON first (fast & easily editable in GitHub/Notepad), then fallback to XLSX
+    try {
+      const jsonRes = await fetch('./data/software_catalog.json', { cache: 'no-cache' });
+      if (jsonRes.ok) {
+        const jsonText = await jsonRes.text();
+        const parsed = parseCatalogJSON(jsonText);
+        if (parsed.rules && parsed.rules.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (jsonErr) {
+      console.warn('Không tải được software_catalog.json, thử nạp software_catalog.xlsx:', jsonErr);
+    }
+
+    // Fallback to Excel
+    const xlsxRes = await fetch('./data/software_catalog.xlsx', { cache: 'no-cache' });
+    if (!xlsxRes.ok) {
+      throw new Error(`Không thể tải Catalog mặc định từ ./data/software_catalog.xlsx (Mã lỗi: ${xlsxRes.status})`);
+    }
+    const buffer = await xlsxRes.arrayBuffer();
     return parseCatalogWorkbook(buffer);
   }
 
   /**
-   * Offline mode: read catalog from user selected File object
+   * Offline mode: read catalog from user selected File object (.xlsx, .xls or .json)
    */
   async function loadCatalogFromFile(file) {
     if (!file) {
-      throw new Error('Vui lòng chọn file Catalog hợp lệ (.xlsx, .xls)');
+      throw new Error('Vui lòng chọn file Catalog hợp lệ (.xlsx, .xls, .json)');
+    }
+    if (file.name.endsWith('.json')) {
+      const text = await file.text();
+      return parseCatalogJSON(text);
     }
     const buffer = await file.arrayBuffer();
     return parseCatalogWorkbook(buffer);
@@ -186,8 +296,9 @@
 
   global.SAM_CATALOG_LOADER = {
     parseCatalogWorkbook,
+    parseCatalogJSON,
     loadCatalogFromURL,
     loadCatalogFromFile
   };
 
-})(typeof window !== 'undefined' ? window : this);
+})(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : this));

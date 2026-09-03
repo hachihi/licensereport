@@ -235,12 +235,25 @@
       computers: newComputers,
       installations: newInstalls,
       detectedCatalogRules,
+      sheet3Rules: detectedCatalogRules,
       catalogSheetName
     };
   }
 
+  /**
+   * Reads inventory File object and parses workbook
+   */
+  async function loadInventoryFile(file, activeCatalog) {
+    if (!file) {
+      throw new Error('Vui lòng chọn tập tin kiểm kê hợp lệ (.xlsx, .xls, .csv)');
+    }
+    const buffer = await file.arrayBuffer();
+    return parseInventoryWorkbook(buffer, activeCatalog);
+  }
+
   global.SAM_DATA_LOADER = {
-    parseInventoryWorkbook
+    parseInventoryWorkbook,
+    loadInventoryFile
   };
 
 })(typeof window !== 'undefined' ? window : this);

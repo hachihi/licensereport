@@ -8,28 +8,38 @@
   html, body {
     background: white !important;
     color: #0f172a !important;
-    font-size: 9pt !important;
-    line-height: 1.35 !important;
+    font-size: 8.5pt !important;
+    line-height: 1.3 !important;
     overflow: visible !important;
     height: auto !important;
     min-height: 0 !important;
     width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  body.has-print-modal > #root > div > *:not(#print-modal-root),
-  body.has-print-modal header,
-  body.has-print-modal main,
-  body.has-print-modal footer,
+  /* 1. Hide EVERYTHING outside the print modal */
+  body > #root > div > header,
+  body > #root > div > main,
+  body > #root > div > footer,
+  body > #root > div > *:not(#print-modal-root),
+  header,
+  main,
+  footer,
+  nav,
   .no-print,
-  .print-hidden {
+  .print-hidden,
+  .print\:hidden,
+  [role="dialog"] ~ *,
+  button {
     display: none !important;
   }
 
+  /* 2. Reset modal backdrop to natural flow on the paper */
   #print-modal-root,
-  .print-modal-backdrop,
-  .print-modal-container {
+  .print-modal-backdrop {
     position: static !important;
     display: block !important;
     width: 100% !important;
@@ -42,8 +52,48 @@
     border: none !important;
     padding: 0 !important;
     margin: 0 !important;
+    inset: auto !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    z-index: auto !important;
   }
 
+  .print-modal-container {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* 3. Hide Modal Top Header Bar and Filter/Action Bar during printing */
+  .print-modal-container > div:first-child,
+  .print-modal-container > div:nth-child(2),
+  .print-modal-header,
+  .print-modal-controls {
+    display: none !important;
+  }
+
+  /* 4. Report body container expands fully without scrolling */
+  .print-report-body,
+  .print-modal-container > div:last-child {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+  }
+
+  /* 5. Typography and Table Optimizations for Sharp Paper Output */
   table {
     width: 100% !important;
     max-width: 100% !important;
@@ -54,11 +104,11 @@
   }
 
   th, td {
-    padding: 3.5px 4.5px !important;
+    padding: 3px 4px !important;
     word-wrap: break-word !important;
     word-break: break-word !important;
     white-space: normal !important;
-    border-color: #94a3b8 !important;
+    border: 1px solid #cbd5e1 !important;
   }
 
   thead {
@@ -95,3 +145,4 @@
     display: block !important;
   }
 }
+
