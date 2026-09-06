@@ -506,39 +506,15 @@
               onChange: setRiskFilterPlan,
             }),
           reportType === "PER_DEVICE_AUDIT" &&
-            React.createElement(
-              "div",
-              {
-                className:
-                  "flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-slate-300 text-xs",
-              },
-              React.createElement(
-                "span",
-                { className: "font-semibold text-slate-600 whitespace-nowrap" },
-                "🖥️ Chọn máy:"
-              ),
-              React.createElement(
-                "select",
-                {
-                  value: selectedDeviceHostname,
-                  onChange: (e) => setSelectedDeviceHostname(e.target.value),
-                  className:
-                    "bg-transparent font-medium text-slate-900 focus:outline-none cursor-pointer max-w-[200px] truncate",
-                },
-                React.createElement(
-                  "option",
-                  { value: "ALL" },
-                  `Tất cả các máy (${computers.length} máy)`
-                ),
-                computers.map((c) =>
-                  React.createElement(
-                    "option",
-                    { key: c.hostname, value: c.hostname },
-                    `${c.hostname}${c.user ? " - " + c.user : ""}`
-                  )
-                )
-              )
-            ),
+            React.createElement(MultiSelectFilter, {
+              label: "🖥️ Chọn máy",
+              options: computers.map((c) => ({
+                value: c.hostname,
+                label: `${c.hostname}${c.user ? " (" + c.user + ")" : ""}`
+              })),
+              selected: selectedDeviceHostnames,
+              onChange: setSelectedDeviceHostnames,
+            }),
           reportType === "PER_DEVICE_AUDIT" &&
             React.createElement(MultiSelectFilter, {
               label: "Lọc Hãng",
@@ -2341,9 +2317,9 @@
                     React.createElement(
                       "strong",
                       { className: "text-blue-900 font-bold" },
-                      selectedDeviceHostname === "ALL"
-                        ? `${computers.length} máy`
-                        : selectedDeviceHostname
+                      selectedDeviceHostnames.length === computers.length
+                        ? `Tất cả (${computers.length} máy)`
+                        : `${selectedDeviceHostnames.length}/${computers.length} máy đã chọn`
                     )
                   )
                 )
@@ -2353,10 +2329,15 @@
               React.createElement(
                 "div",
                 { className: "space-y-6 print:space-y-0" },
-                (selectedDeviceHostname === "ALL"
-                  ? computers
-                  : computers.filter((c) => c.hostname === selectedDeviceHostname)
-                ).map((comp, compIdx, arr) => {
+                selectedDeviceHostnames.length === 0
+                  ? React.createElement(
+                      "div",
+                      { className: "p-8 text-center text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-300" },
+                      "Chưa chọn máy tính nào để in. Vui lòng chọn ít nhất một máy trong bộ lọc phía trên."
+                    )
+                  : computers
+                      .filter((c) => selectedDeviceHostnames.includes(c.hostname))
+                      .map((comp, compIdx, arr) => {
                   const details = parseDeviceDetails(comp, compIdx);
 
                   // Device installs
