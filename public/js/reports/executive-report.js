@@ -2,8 +2,9 @@
 (function (global) {
   'use strict';
 
-  function MultiSelectFilter({ label, options, selected, onChange }) {
+  function MultiSelectFilter({ label, options = [], selected = [], onChange }) {
     const [open, setOpen] = React.useState(false);
+    const [search, setSearch] = React.useState("");
     const wrapRef = React.useRef(null);
 
     React.useEffect(() => {
@@ -16,20 +17,44 @@
       return () => document.removeEventListener("mousedown", handleOutsideClick);
     }, []);
 
-    const toggleOption = (opt) => {
-      if (selected.includes(opt)) {
-        onChange(selected.filter((s) => s !== opt));
+    // Normalize options: handles both strings array and objects array with { value, label }
+    const items = React.useMemo(() => {
+      return (options || []).map((opt) => {
+        if (opt && typeof opt === "object" && opt.value !== undefined) {
+          return { value: opt.value, label: opt.label || String(opt.value) };
+        }
+        return { value: opt, label: String(opt) };
+      });
+    }, [options]);
+
+    const safeSelected = Array.isArray(selected) ? selected : [];
+
+    const toggleOption = (val) => {
+      if (safeSelected.includes(val)) {
+        onChange(safeSelected.filter((s) => s !== val));
       } else {
-        onChange([...selected, opt]);
+        onChange([...safeSelected, val]);
       }
     };
 
-    const allSelected = selected.length === options.length;
+    const allSelected = items.length > 0 && safeSelected.length === items.length;
     const summaryText = allSelected
-      ? `Tất cả (${options.length})`
-      : selected.length === 0
-        ? "Không chọn mục nào"
-        : `${selected.length}/${options.length} đã chọn`;
+      ? `Tất cả (${items.length})`
+      : safeSelected.length === 0
+        ? "Không chọn"
+        : safeSelected.length === 1
+          ? (items.find((i) => i.value === safeSelected[0])?.label || safeSelected[0])
+          : `${safeSelected.length}/${items.length} đã chọn`;
+
+    const filteredItems = React.useMemo(() => {
+      if (!search.trim()) return items;
+      const q = search.toLowerCase();
+      return items.filter(
+        (it) =>
+          it.label.toLowerCase().includes(q) ||
+          String(it.value).toLowerCase().includes(q)
+      );
+    }, [items, search]);
 
     return React.createElement(
       "div",
@@ -38,12 +63,15 @@
         "button",
         {
           type: "button",
-          onClick: () => setOpen((o) => !o),
+          onClick: () => {
+            setOpen((o) => !o);
+            setSearch("");
+          },
           className:
-            "flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-slate-300 text-xs hover:bg-slate-50 transition cursor-pointer",
+            "flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-slate-300 text-xs hover:bg-slate-50 transition cursor-pointer shadow-xs",
         },
         React.createElement("span", { className: "font-semibold text-slate-600" }, label + ":"),
-        React.createElement("span", { className: "font-medium text-slate-900" }, summaryText),
+        React.createElement("span", { className: "font-medium text-slate-900 truncate max-w-[150px]", title: summaryText }, summaryText),
         React.createElement("span", { className: "text-slate-400 text-[8px]" }, "▼")
       ),
       open &&
@@ -51,22 +79,35 @@
           "div",
           {
             className:
-              "absolute z-50 mt-1 right-0 w-56 bg-white border border-slate-300 rounded-lg shadow-xl p-2 text-xs",
+              "absolute z-50 mt-1 left-0 min-w-[240px] max-w-[340px] bg-white border border-slate-300 rounded-xl shadow-2xl p-2.5 text-xs text-slate-800",
           },
+          items.length > 5 &&
+            React.createElement(
+              "div",
+              { className: "mb-1.5" },
+              React.createElement("input", {
+                type: "text",
+                placeholder: "Tìm kiếm nhanh...",
+                value: search,
+                onChange: (e) => setSearch(e.target.value),
+                className:
+                  "w-full px-2 py-1 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-slate-50",
+              })
+            ),
           React.createElement(
             "div",
             {
               className:
-                "flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-200",
+                "flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-200 text-[11px]",
             },
             React.createElement(
               "button",
               {
                 type: "button",
-                onClick: () => onChange(options),
+                onClick: () => onChange(items.map((i) => i.value)),
                 className: "text-blue-600 hover:underline font-semibold cursor-pointer",
               },
-              "Chọn tất cả"
+              `Chọn tất cả (${items.length})`
             ),
             React.createElement(
               "button",
@@ -81,23 +122,33 @@
           React.createElement(
             "div",
             { className: "max-h-56 overflow-y-auto space-y-0.5" },
-            options.map((opt) =>
-              React.createElement(
-                "label",
-                {
-                  key: opt,
-                  className:
-                    "flex items-center gap-2 px-1.5 py-1 rounded hover:bg-slate-50 cursor-pointer select-none",
-                },
-                React.createElement("input", {
-                  type: "checkbox",
-                  checked: selected.includes(opt),
-                  onChange: () => toggleOption(opt),
-                  className: "accent-blue-600 cursor-pointer",
-                }),
-                React.createElement("span", { className: "text-slate-800" }, opt)
-              )
-            )
+            filteredItems.length === 0
+              ? React.createElement(
+                  "div",
+                  { className: "p-2 text-center text-slate-400 italic text-[11px]" },
+                  "Không có kết quả"
+                )
+              : filteredItems.map((it) =>
+                  React.createElement(
+                    "label",
+                    {
+                      key: String(it.value),
+                      className:
+                        "flex items-center gap-2 px-1.5 py-1 rounded hover:bg-slate-50 cursor-pointer select-none",
+                    },
+                    React.createElement("input", {
+                      type: "checkbox",
+                      checked: safeSelected.includes(it.value),
+                      onChange: () => toggleOption(it.value),
+                      className: "accent-blue-600 cursor-pointer rounded shrink-0",
+                    }),
+                    React.createElement(
+                      "span",
+                      { className: "text-slate-800 break-words leading-tight", title: it.label },
+                      it.label
+                    )
+                  )
+                )
           )
         )
     );
@@ -154,18 +205,123 @@
 
     const standardTitle = `${(catalogInfo && catalogInfo.name) || 'Hachihi SAM Standard'} v${(catalogInfo && catalogInfo.version) || '2026.09'}`;
 
+    // State for 6. PER_DEVICE_AUDIT (Báo cáo theo từng máy)
+    const [selectedDeviceHostnames, setSelectedDeviceHostnames] = React.useState([]);
+    const [perDeviceVendorFilter, setPerDeviceVendorFilter] = React.useState([]);
+    const [perDeviceLicenseFilter, setPerDeviceLicenseFilter] = React.useState([]);
+    const [compactHardware, setCompactHardware] = React.useState(true);
+
+    // Editable overrides states for reports
+    const [execPlanOverrides, setExecPlanOverrides] = React.useState({});
+    const [detailOverrides, setDetailOverrides] = React.useState({});
+    const [deviceSoftwareOverrides, setDeviceSoftwareOverrides] = React.useState({});
+    const [deviceInfoOverrides, setDeviceInfoOverrides] = React.useState({});
+
+    React.useEffect(() => {
+      if (computers && computers.length > 0) {
+        setSelectedDeviceHostnames((prev) => {
+          if (Array.isArray(prev) && prev.length > 0) return prev;
+          return computers.map((c) => c.hostname);
+        });
+      }
+    }, [computers]);
+
+    const safeSelectedDeviceHostnames = React.useMemo(() => {
+      if (Array.isArray(selectedDeviceHostnames) && selectedDeviceHostnames.length > 0) {
+        return selectedDeviceHostnames;
+      }
+      return (computers || []).map((c) => c.hostname);
+    }, [selectedDeviceHostnames, computers]);
+
+    const allDeviceVendors = React.useMemo(() => {
+      const set = new Set();
+      set.add("Microsoft Corporation");
+      (installations || []).forEach((i) => {
+        if (i.vendor && i.vendor.trim() && i.vendor !== "Chưa rõ") {
+          set.add(i.vendor.trim());
+        }
+      });
+      return Array.from(set).sort();
+    }, [installations]);
+
+    const perDeviceLicenseOptions = React.useMemo(() => [
+      "Có phí (Thương mại)",
+      "Miễn phí (Mã nguồn mở / FOSS)",
+      "Bản quyền cá nhân (Bẫy bản quyền)",
+    ], []);
+
+    React.useEffect(() => {
+      if (allDeviceVendors.length > 0 && perDeviceVendorFilter.length === 0) {
+        setPerDeviceVendorFilter(allDeviceVendors);
+      }
+    }, [allDeviceVendors]);
+
+    React.useEffect(() => {
+      if (perDeviceLicenseFilter.length === 0) {
+        setPerDeviceLicenseFilter(perDeviceLicenseOptions);
+      }
+    }, [perDeviceLicenseOptions]);
+
+    const parseDeviceDetails = (comp, idx) => {
+      const stt = String(idx + 1).padStart(2, "0");
+      const hostname = (comp.hostname || `THIẾT_BỊ_${stt}`).trim();
+
+      let brand = (comp.manufacturer || "").trim();
+      let model = (comp.model || "").trim();
+
+      if (!brand && model) {
+        if (model.includes(" - ")) {
+          const parts = model.split(" - ");
+          brand = parts[0].trim();
+          model = parts.slice(1).join(" - ").trim();
+        } else {
+          const knownBrands = ["AVITA", "DELL", "HP", "LENOVO", "ASUS", "ACER", "APPLE", "MSI", "MICROSOFT", "SAMSUNG", "GIGABYTE"];
+          const upper = model.toUpperCase();
+          for (const b of knownBrands) {
+            if (upper.startsWith(b)) {
+              brand = b;
+              model = model.slice(b.length).trim();
+              break;
+            }
+          }
+        }
+      }
+
+      const brandModelDisplay = (brand && model) ? `${brand} - ${model}` : (brand || model || "Tiêu chuẩn");
+      const deviceTitle = `THIẾT BỊ ${stt}: ${hostname} (${brandModelDisplay})`;
+
+      const cpuText = comp.cpu || (comp.model && comp.model.includes("Core") ? comp.model : "Intel Core i5 / Tương đương");
+      const ramText = comp.ram || (comp.model && comp.model.match(/\d+\s*GB/i) ? comp.model.match(/\d+\s*GB/i)[0] : "8 GB / Supported: 0 GB");
+      const diskText = comp.disk || "1TB SSD / Tốc độ cao";
+      const modelText = brandModelDisplay;
+
+      return {
+        stt,
+        hostname,
+        brand,
+        model,
+        brandModelDisplay,
+        deviceTitle,
+        cpuText,
+        ramText,
+        diskText,
+        modelText,
+        oneLineSummary: `${brandModelDisplay} • CPU: ${cpuText} • RAM: ${ramText} • Ổ cứng: ${diskText}`
+      };
+    };
+
     return React.createElement(
       "div",
       {
         id: "print-modal-root",
         className:
-          "fixed inset-0 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 z-50 animate-fadeIn print-modal-backdrop",
+          "fixed inset-0 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-1 sm:p-2 z-50 animate-fadeIn print-modal-backdrop",
       },
       React.createElement(
         "div",
         {
           className:
-            "bg-white rounded-2xl max-w-6xl w-full max-h-[96vh] flex flex-col shadow-2xl overflow-hidden border border-slate-300 print-modal-container",
+            "bg-white rounded-xl w-[99vw] max-w-[99vw] h-[98vh] max-h-[98vh] flex flex-col shadow-2xl overflow-hidden border border-slate-300 print-modal-container",
         },
         // Modal Header Bar (hidden in print)
         React.createElement(
@@ -276,7 +432,48 @@
                   title: "Báo cáo tổng quan số lượng máy tính đã kiểm tra",
                 },
                 "5. Tổng Quan Máy"
+              ),
+              React.createElement(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setReportType("PER_DEVICE_AUDIT"),
+                  className: `px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer ${
+                    reportType === "PER_DEVICE_AUDIT" ? "bg-amber-600 text-white shadow-sm" : "text-amber-200 hover:text-white"
+                  }`,
+                  title: "Mẫu báo cáo tầm soát thiết bị & phần mềm chi tiết theo từng máy",
+                },
+                "6. Mẫu Từng Máy"
               )
+            ),
+            React.createElement(
+              "button",
+              {
+                type: "button",
+                onClick: () => {
+                  if (global.SAM_EXPORTER && global.SAM_EXPORTER.exportExecutiveReport) {
+                    global.SAM_EXPORTER.exportExecutiveReport(
+                      executivePlanRows,
+                      metrics,
+                      clientName,
+                      auditDate,
+                      installations,
+                      computers,
+                      kpiBreakdown,
+                      {
+                        execPlanOverrides,
+                        detailOverrides,
+                        deviceSoftwareOverrides,
+                        deviceInfoOverrides
+                      }
+                    );
+                  }
+                },
+                className:
+                  "px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold shadow transition cursor-pointer flex items-center gap-1.5",
+                title: "Xuất file Excel đầy đủ 5 sheets chuẩn doanh nghiệp kèm biểu đồ trực quan",
+              },
+              "📊 Xuất Excel Chuẩn"
             ),
             React.createElement(
               "button",
@@ -305,7 +502,7 @@
           "div",
           {
             className:
-              "bg-slate-100 px-6 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-700 print-hidden no-print print-modal-controls",
+              "bg-slate-100 px-6 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-700 print-hidden no-print print-modal-controls relative z-20",
           },
           React.createElement(
             "div",
@@ -410,6 +607,45 @@
               selected: riskFilterPlan,
               onChange: setRiskFilterPlan,
             }),
+          reportType === "PER_DEVICE_AUDIT" &&
+            React.createElement(MultiSelectFilter, {
+              label: "🖥️ Chọn máy",
+              options: computers.map((c) => ({
+                value: c.hostname,
+                label: `${c.hostname}${c.user ? " (" + c.user + ")" : ""}`
+              })),
+              selected: selectedDeviceHostnames,
+              onChange: setSelectedDeviceHostnames,
+            }),
+          reportType === "PER_DEVICE_AUDIT" &&
+            React.createElement(MultiSelectFilter, {
+              label: "Lọc Hãng",
+              options: allDeviceVendors,
+              selected: perDeviceVendorFilter,
+              onChange: setPerDeviceVendorFilter,
+            }),
+          reportType === "PER_DEVICE_AUDIT" &&
+            React.createElement(MultiSelectFilter, {
+              label: "Loại bản quyền",
+              options: perDeviceLicenseOptions,
+              selected: perDeviceLicenseFilter,
+              onChange: setPerDeviceLicenseFilter,
+            }),
+          reportType === "PER_DEVICE_AUDIT" &&
+            React.createElement(
+              "label",
+              {
+                className:
+                  "flex items-center gap-1.5 cursor-pointer select-none bg-white px-2.5 py-1 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition",
+              },
+              React.createElement("input", {
+                type: "checkbox",
+                checked: compactHardware,
+                onChange: (e) => setCompactHardware(e.target.checked),
+                className: "accent-blue-600 cursor-pointer",
+              }),
+              "Gom cấu hình 1 dòng"
+            ),
           React.createElement(
             "div",
             {
@@ -423,6 +659,43 @@
               printUtils.getDocumentTitleForPrint ? printUtils.getDocumentTitleForPrint(reportType, clientName, auditDate) : 'Bao_Cao',
               ".pdf"
             )
+          ),
+          React.createElement(
+            "div",
+            {
+              className:
+                "w-full flex items-center justify-between gap-2 text-[11px] text-blue-900 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg",
+            },
+            React.createElement(
+              "div",
+              { className: "flex items-center gap-1.5" },
+              React.createElement("span", { className: "text-blue-600 font-bold" }, "✏️ Chỉnh sửa trực tiếp:"),
+              React.createElement(
+                "span",
+                null,
+                "Các cột ",
+                React.createElement("strong", { className: "text-blue-950 font-semibold" }, "Phân loại / Trạng thái / Khuyến nghị"),
+                " (và thông tin Người dùng / Phòng ban) đều có thể chỉnh sửa trực tiếp trên bảng xem trước này trước khi In / Xuất PDF."
+              )
+            ),
+            (Object.keys(execPlanOverrides).length > 0 ||
+              Object.keys(detailOverrides).length > 0 ||
+              Object.keys(deviceSoftwareOverrides).length > 0 ||
+              Object.keys(deviceInfoOverrides).length > 0) &&
+              React.createElement(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => {
+                    setExecPlanOverrides({});
+                    setDetailOverrides({});
+                    setDeviceSoftwareOverrides({});
+                    setDeviceInfoOverrides({});
+                  },
+                  className: "text-[10px] text-rose-600 hover:text-rose-800 underline font-medium cursor-pointer ml-auto shrink-0",
+                },
+                "↺ Khôi phục dữ liệu gốc"
+              )
           )
         ),
 
@@ -1104,25 +1377,73 @@
                             },
                             row.missingInvoiceCount
                           ),
-                          React.createElement(
-                            "td",
-                            { className: "p-2 text-center border-r border-slate-200" },
-                            React.createElement(
-                              "span",
-                              {
-                                className: `inline-block text-[10px] px-2 py-0.5 rounded border ${row.riskColor}`,
-                              },
-                              row.riskLabel
-                            )
-                          ),
-                          React.createElement(
-                            "td",
-                            {
-                              className:
-                                "p-2 border-r border-slate-200 text-slate-800 leading-snug",
-                            },
-                            row.recommendation
-                          ),
+                          (() => {
+                            const curRisk = execPlanOverrides[row.name]?.riskLabel || row.riskLabel;
+                            const curRiskColor = execPlanOverrides[row.name]?.riskColor || row.riskColor;
+                            const curRec = execPlanOverrides[row.name]?.recommendation !== undefined ? execPlanOverrides[row.name].recommendation : row.recommendation;
+
+                            return [
+                              React.createElement(
+                                "td",
+                                { key: "risk", className: "p-1.5 text-center border-r border-slate-200" },
+                                React.createElement(
+                                  "select",
+                                  {
+                                    value: curRisk,
+                                    onChange: (e) => {
+                                      const val = e.target.value;
+                                      let newCol = curRiskColor;
+                                      if (val.includes("NGHIÊM TRỌNG")) newCol = "bg-rose-100 text-rose-800 border-rose-200 font-bold";
+                                      else if (val.includes("CAO")) newCol = "bg-amber-100 text-amber-800 border-amber-200 font-bold";
+                                      else if (val.includes("CẦN KIỂM TRA")) newCol = "bg-blue-100 text-blue-800 border-blue-200 font-medium";
+                                      else newCol = "bg-emerald-100 text-emerald-800 border-emerald-200 font-medium";
+                                      setExecPlanOverrides((prev) => ({
+                                        ...prev,
+                                        [row.name]: { ...prev[row.name], riskLabel: val, riskColor: newCol },
+                                      }));
+                                    },
+                                    className:
+                                      "print:hidden text-[10px] font-bold px-1.5 py-0.5 rounded border border-slate-300 bg-white hover:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer max-w-[130px]",
+                                    title: "Nhấn để sửa Mức độ rủi ro",
+                                  },
+                                  React.createElement("option", { value: "🔴 RỦI RO NGHIÊM TRỌNG" }, "🔴 Nghiêm trọng"),
+                                  React.createElement("option", { value: "🟠 RỦI RO CAO" }, "🟠 Rủi ro Cao"),
+                                  React.createElement("option", { value: "🟡 CẦN KIỂM TRA" }, "🟡 Cần kiểm tra"),
+                                  React.createElement("option", { value: "🟢 RỦI RO THẤP / FOSS" }, "🟢 Rủi ro Thấp / FOSS"),
+                                  React.createElement("option", { value: "🟢 HỢP LỆ" }, "🟢 Hợp lệ")
+                                ),
+                                React.createElement(
+                                  "span",
+                                  {
+                                    className: `hidden print:inline-block text-[10px] px-2 py-0.5 rounded border ${curRiskColor}`,
+                                  },
+                                  curRisk
+                                )
+                              ),
+                              React.createElement(
+                                "td",
+                                {
+                                  key: "rec",
+                                  className:
+                                    "p-1.5 border-r border-slate-200 text-slate-800 leading-snug",
+                                },
+                                React.createElement("input", {
+                                  type: "text",
+                                  value: curRec,
+                                  onChange: (e) => {
+                                    const val = e.target.value;
+                                    setExecPlanOverrides((prev) => ({
+                                      ...prev,
+                                      [row.name]: { ...prev[row.name], recommendation: val },
+                                    }));
+                                  },
+                                  className:
+                                    "w-full text-xs text-slate-800 bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1.5 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
+                                  title: "Nhấn để sửa Phương án khuyến nghị",
+                                })
+                              )
+                            ];
+                          })(),
                           React.createElement(
                             "td",
                             {
@@ -1464,13 +1785,18 @@
                     "tbody",
                     { className: "divide-y divide-slate-200 bg-white text-[9.5px]" },
                     detailFilteredInstalls.map((inst, idx) => {
-                      const pmClass = utils.classifySoftware ? utils.classifySoftware(inst) : 'Thương mại';
-                      const invStatusText = utils.getInvoiceText ? utils.getInvoiceText(inst) : 'Chưa có hóa đơn';
-                      const actionText = utils.getActionRequired ? utils.getActionRequired(inst) : 'Kiểm tra';
+                      const instKey = inst.id || `${inst.computerHostname}::${inst.rawSoftwareName || inst.displayName}`;
+                      const defaultPmClass = utils.classifySoftware ? utils.classifySoftware(inst) : 'Thương mại';
+                      const defaultInvStatusText = utils.getInvoiceText ? utils.getInvoiceText(inst) : 'Chưa có hóa đơn';
+                      const defaultActionText = utils.getActionRequired ? utils.getActionRequired(inst) : 'Kiểm tra';
+
+                      const pmClass = detailOverrides[instKey]?.category !== undefined ? detailOverrides[instKey].category : defaultPmClass;
+                      const invStatusText = detailOverrides[instKey]?.invoiceStatus !== undefined ? detailOverrides[instKey].invoiceStatus : defaultInvStatusText;
+                      const actionText = detailOverrides[instKey]?.recommendation !== undefined ? detailOverrides[instKey].recommendation : defaultActionText;
 
                       return React.createElement(
                         "tr",
-                        { key: inst.id || idx, className: "hover:bg-slate-50" },
+                        { key: instKey || idx, className: "hover:bg-slate-50" },
                         React.createElement(
                           "td",
                           {
@@ -1522,12 +1848,35 @@
                           "td",
                           {
                             className:
-                              "p-1.5 text-center border-r border-slate-200 whitespace-nowrap",
+                              "p-1 text-center border-r border-slate-200 whitespace-nowrap",
                           },
+                          React.createElement(
+                            "select",
+                            {
+                              value: pmClass,
+                              onChange: (e) => {
+                                const val = e.target.value;
+                                setDetailOverrides((prev) => ({
+                                  ...prev,
+                                  [instKey]: { ...prev[instKey], category: val },
+                                }));
+                              },
+                              className:
+                                "print:hidden text-[9px] font-semibold px-1 py-0.5 rounded border border-slate-300 bg-white hover:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer max-w-[110px]",
+                              title: "Nhấn để sửa Phân loại",
+                            },
+                            React.createElement("option", { value: "Thương mại" }, "Thương mại"),
+                            React.createElement("option", { value: "Miễn phí (Freeware)" }, "Miễn phí (Freeware)"),
+                            React.createElement("option", { value: "Tool Crack" }, "Tool Crack"),
+                            React.createElement("option", { value: "Phần mềm rác" }, "Phần mềm rác"),
+                            React.createElement("option", { value: "Freemium" }, "Freemium"),
+                            React.createElement("option", { value: "Mã nguồn mở (FOSS)" }, "Mã nguồn mở (FOSS)"),
+                            React.createElement("option", { value: "Hệ điều hành" }, "Hệ điều hành")
+                          ),
                           React.createElement(
                             "span",
                             {
-                              className: `inline-block px-1.5 py-0.5 rounded text-[8.5px] font-semibold ${
+                              className: `hidden print:inline-block px-1.5 py-0.5 rounded text-[8.5px] font-semibold ${
                                 pmClass === "Tool Crack"
                                   ? "bg-rose-100 text-rose-800 font-bold"
                                   : pmClass === "Phần mềm rác"
@@ -1546,12 +1895,33 @@
                           "td",
                           {
                             className:
-                              "p-1.5 text-center border-r border-slate-200 whitespace-nowrap",
+                              "p-1 text-center border-r border-slate-200 whitespace-nowrap",
                           },
+                          React.createElement(
+                            "select",
+                            {
+                              value: invStatusText,
+                              onChange: (e) => {
+                                const val = e.target.value;
+                                setDetailOverrides((prev) => ({
+                                  ...prev,
+                                  [instKey]: { ...prev[instKey], invoiceStatus: val },
+                                }));
+                              },
+                              className:
+                                "print:hidden text-[9px] font-medium px-1 py-0.5 rounded border border-slate-300 bg-white hover:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer max-w-[115px]",
+                              title: "Nhấn để sửa Trạng thái hóa đơn",
+                            },
+                            React.createElement("option", { value: "Đã có Hóa đơn VAT" }, "Đã có HĐ VAT"),
+                            React.createElement("option", { value: "Chưa có hóa đơn" }, "Chưa có hóa đơn"),
+                            React.createElement("option", { value: "Bẫy bản quyền cá nhân" }, "Bẫy bản quyền"),
+                            React.createElement("option", { value: "Không áp dụng / FOSS" }, "Không áp dụng / FOSS"),
+                            React.createElement("option", { value: "Cần kiểm tra" }, "Cần kiểm tra")
+                          ),
                           React.createElement(
                             "span",
                             {
-                              className: `inline-block px-1.5 py-0.5 rounded text-[8.5px] font-medium ${
+                              className: `hidden print:inline-block px-1.5 py-0.5 rounded text-[8.5px] font-medium ${
                                 invStatusText === "Đã có Hóa đơn VAT"
                                   ? "text-emerald-700 font-bold"
                                   : invStatusText === "Chưa có hóa đơn"
@@ -1564,24 +1934,30 @@
                         ),
                         React.createElement(
                           "td",
-                          { className: "p-1.5 text-slate-800 leading-snug" },
-                          React.createElement(
-                            "span",
-                            {
-                              className: `${
-                                actionText.includes("GỠ BỎ GẤP")
-                                  ? "text-rose-700 font-bold"
-                                  : actionText.includes("Mua")
-                                  ? "text-blue-700 font-bold"
-                                  : actionText.includes("Thay bằng")
-                                  ? "text-indigo-700 font-semibold"
-                                  : actionText.includes("Hợp lệ")
-                                  ? "text-emerald-700 font-medium"
-                                  : "text-slate-700"
-                              }`,
+                          { className: "p-1 text-slate-800 leading-snug" },
+                          React.createElement("input", {
+                            type: "text",
+                            value: actionText,
+                            onChange: (e) => {
+                              const val = e.target.value;
+                              setDetailOverrides((prev) => ({
+                                ...prev,
+                                [instKey]: { ...prev[instKey], recommendation: val },
+                              }));
                             },
-                            actionText
-                          )
+                            className: `w-full text-[9.5px] bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent ${
+                              actionText.includes("GỠ BỎ GẤP")
+                                ? "text-rose-700 font-bold"
+                                : actionText.includes("Mua")
+                                ? "text-blue-700 font-bold"
+                                : actionText.includes("Thay bằng")
+                                ? "text-indigo-700 font-semibold"
+                                : actionText.includes("Hợp lệ")
+                                ? "text-emerald-700 font-medium"
+                                : "text-slate-700"
+                            }`,
+                            title: "Nhấn để sửa Khuyến nghị xử lý",
+                          })
                         )
                       );
                     })
@@ -2115,7 +2491,879 @@
                   "Hachihi SAM Pro • By hachihi.vn 0933842126"
                 )
               )
-            )
+            ),
+
+          // 6. PER_DEVICE_AUDIT REPORT (MẪU BÁO CÁO TẦM SOÁT THIẾT BỊ & PHẦN MỀM TỪNG MÁY)
+          reportType === "PER_DEVICE_AUDIT" &&
+            React.createElement(
+              "div",
+              {
+                className:
+                  "bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-6 print:border-none print:shadow-none print:p-0",
+              },
+              // Title Banner
+              React.createElement(
+                "div",
+                { className: "text-center border-b border-slate-300 pb-3" },
+                React.createElement(
+                  "h1",
+                  {
+                    className:
+                      "text-xl sm:text-2xl font-black text-slate-900 uppercase tracking-tight",
+                  },
+                  "TẦM SOÁT THIẾT BỊ & PHẦN MỀM"
+                ),
+                React.createElement(
+                  "div",
+                  {
+                    className:
+                      "mt-2 text-xs text-slate-700 font-medium flex flex-wrap items-center justify-center gap-x-3 gap-y-1",
+                  },
+                  React.createElement(
+                    "span",
+                    null,
+                    "Khách hàng: ",
+                    React.createElement(
+                      "strong",
+                      { className: "text-slate-950 font-bold" },
+                      clientName
+                    )
+                  ),
+                  React.createElement("span", null, "|"),
+                  React.createElement(
+                    "span",
+                    null,
+                    "Ngày kiểm toán: ",
+                    React.createElement(
+                      "strong",
+                      { className: "text-slate-950 font-bold" },
+                      auditDate
+                    )
+                  ),
+                  React.createElement("span", null, "|"),
+                  React.createElement(
+                    "span",
+                    null,
+                    "Đơn vị thực hiện: ",
+                    React.createElement(
+                      "strong",
+                      { className: "text-slate-950 font-bold" },
+                      auditorUnit
+                    )
+                  ),
+                  React.createElement("span", null, "|"),
+                  React.createElement(
+                    "span",
+                    null,
+                    "Thiết bị hiển thị: ",
+                    (() => {
+                      const safeSelectedList = Array.isArray(selectedDeviceHostnames)
+                        ? selectedDeviceHostnames
+                        : (selectedDeviceHostnames ? [selectedDeviceHostnames] : []);
+                      const totalComps = (computers || []).length;
+                      return React.createElement(
+                        "strong",
+                        { className: "text-blue-900 font-bold" },
+                        safeSelectedList.length === totalComps
+                          ? `Tất cả (${totalComps} máy)`
+                          : `${safeSelectedList.length}/${totalComps} máy đã chọn`
+                      );
+                    })()
+                  )
+                )
+              ),
+
+              // Devices List
+              (() => {
+                const safeSelectedList = Array.isArray(selectedDeviceHostnames)
+                  ? selectedDeviceHostnames
+                  : (selectedDeviceHostnames ? [selectedDeviceHostnames] : []);
+                const filteredComps = (computers || []).filter((c) => safeSelectedList.includes(c.hostname));
+
+                return React.createElement(
+                  "div",
+                  { className: "space-y-6 print:space-y-0" },
+                  safeSelectedList.length === 0
+                    ? React.createElement(
+                        "div",
+                        { className: "p-8 text-center text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-300" },
+                        "Chưa chọn máy tính nào để in. Vui lòng chọn ít nhất một máy trong bộ lọc phía trên."
+                      )
+                    : filteredComps.map((comp, compIdx, arr) => {
+                  const details = parseDeviceDetails(comp, compIdx);
+
+                  // Device installs
+                  const compInstalls = (installations || []).filter(
+                    (i) =>
+                      String(i.computerHostname || "").toUpperCase() ===
+                      String(comp.hostname || "").toUpperCase()
+                  );
+
+                  // Check crack presence
+                  const crackInstalls = compInstalls.filter(
+                    (i) =>
+                      (i.rawSoftwareName || "").toLowerCase().includes("crack") ||
+                      (i.rawSoftwareName || "").toLowerCase().includes("kms") ||
+                      (i.rawSoftwareName || "").toLowerCase().includes("patch") ||
+                      (i.category || "").includes("Crack")
+                  );
+                  const hasCrack = crackInstalls.length > 0;
+
+                  // OS item at the top
+                  const osItem = {
+                    isOS: true,
+                    name: comp.os || "Windows 11 Home (Licensed)",
+                    category: "Hệ điều hành (OS)",
+                    vendor: "Microsoft Corporation",
+                    licenseType: "COMMERCIAL_PAID",
+                    licenseTypeText: "Có phí (Thương mại)",
+                    licenseTypeLabel: "Bản quyền OEM / Thương mại",
+                    evaluation: "Bản quyền OEM hợp lệ",
+                    evaluationClass: "text-emerald-700 font-medium",
+                  };
+
+                  // Other software items
+                  const appItems = compInstalls.map((inst) => {
+                    let licenseTypeText = "Có phí (Thương mại)";
+                    let licenseTypeLabel = "Bản quyền thương mại (Có phí)";
+                    if (inst.licenseType === "FREE_OPEN_SOURCE") {
+                      licenseTypeText = "Miễn phí (Mã nguồn mở / FOSS)";
+                      licenseTypeLabel = "Mã nguồn mở / Freeware (0đ)";
+                    } else if (inst.licenseType === "FREE_PERSONAL_ONLY" || inst.isTrap) {
+                      licenseTypeText = "Bản quyền cá nhân (Bẫy bản quyền)";
+                      licenseTypeLabel = "Bản quyền cá nhân (Bẫy dùng thử)";
+                    }
+
+                    let evaluation = "Hợp lệ";
+                    let evaluationClass = "text-emerald-700 font-medium";
+
+                    const rawLower = (inst.rawSoftwareName || "").toLowerCase();
+                    if (
+                      inst.category === "Tool Crack" ||
+                      rawLower.includes("crack") ||
+                      rawLower.includes("kms") ||
+                      rawLower.includes("patch")
+                    ) {
+                      evaluation = "CỰC KỲ NGUY HIỂM - Cần gỡ bỏ ngay";
+                      evaluationClass = "text-rose-700 font-bold";
+                    } else if (inst.licenseType === "FREE_PERSONAL_ONLY" || inst.isTrap) {
+                      evaluation = "Cấm dùng cho doanh nghiệp (Cần gỡ bỏ)";
+                      evaluationClass = "text-amber-700 font-bold";
+                    } else if (inst.licenseType === "FREE_OPEN_SOURCE") {
+                      evaluation = "An toàn, miễn phí 100% doanh nghiệp";
+                      evaluationClass = "text-emerald-700 font-medium";
+                    } else if (inst.invoiceStatus === "HAS_INVOICE") {
+                      evaluation = "Đã có Hóa đơn VAT (Hợp lệ)";
+                      evaluationClass = "text-emerald-700 font-bold";
+                    } else {
+                      evaluation = "Chưa có hóa đơn (Cần mua bổ sung hoặc thay FOSS)";
+                      evaluationClass = "text-rose-700 font-bold";
+                    }
+
+                    return {
+                      isOS: false,
+                      name: inst.displayName || inst.rawSoftwareName,
+                      version: inst.version || "",
+                      category: inst.category || "Ứng dụng",
+                      vendor: inst.vendor || "Chưa rõ",
+                      licenseType: inst.licenseType,
+                      licenseTypeText,
+                      licenseTypeLabel,
+                      evaluation,
+                      evaluationClass,
+                    };
+                  });
+
+                  // Combined items: OS first, then other software
+                  const rawItems = [osItem, ...appItems];
+
+                  // Apply Vendor and License Type Filters
+                  const filteredItems = rawItems.filter((item) => {
+                    const matchVendor =
+                      perDeviceVendorFilter.length === 0 ||
+                      perDeviceVendorFilter.includes(item.vendor);
+                    const matchLicense =
+                      perDeviceLicenseFilter.length === 0 ||
+                      perDeviceLicenseFilter.includes(item.licenseTypeText);
+                    return matchVendor && matchLicense;
+                  });
+
+                  return React.createElement(
+                    React.Fragment,
+                    { key: comp.hostname || compIdx },
+                    React.createElement(
+                      "div",
+                      {
+                        className:
+                          "border border-slate-300 rounded-lg overflow-hidden bg-white print-avoid-break shadow-xs print:shadow-none text-xs",
+                      },
+                      React.createElement(
+                        "table",
+                        { className: "w-full text-left border-collapse" },
+                        React.createElement(
+                          "thead",
+                          null,
+                          React.createElement(
+                            "tr",
+                            {
+                              className:
+                                "bg-slate-100 text-slate-800 text-[11px] font-bold border-b border-slate-300",
+                            },
+                            React.createElement(
+                              "th",
+                              {
+                                className:
+                                  "p-2 border-r border-slate-300 w-1/4 text-center font-bold text-slate-800",
+                              },
+                              "Tên linh kiện / Phần mềm"
+                            ),
+                            React.createElement(
+                              "th",
+                              {
+                                className:
+                                  "p-2 border-r border-slate-300 flex-1 text-center font-bold text-slate-800",
+                              },
+                              "Thông tin chi tiết"
+                            ),
+                            React.createElement(
+                              "th",
+                              {
+                                className:
+                                  "p-2 w-1/3 text-center font-bold text-slate-800",
+                              },
+                              "Đánh giá sơ bộ"
+                            )
+                          ),
+                          // Dark Navy Device Header Row: THIẾT BỊ 01: DESKTOP-1QIPHT6 (AVITA - NS14A8)
+                          React.createElement(
+                            "tr",
+                            { className: "bg-slate-900 text-white" },
+                            React.createElement(
+                              "td",
+                              {
+                                colSpan: 3,
+                                className:
+                                  "p-2 font-bold uppercase tracking-wider text-xs sm:text-sm bg-slate-900 text-white border-b border-slate-800",
+                              },
+                              details.deviceTitle
+                            )
+                          )
+                        ),
+                        React.createElement(
+                          "tbody",
+                          { className: "divide-y divide-slate-200 text-xs" },
+                          // 1. TÊN NGƯỜI DÙNG / VỊ TRÍ PHÒNG BAN
+                          React.createElement(
+                            "tr",
+                            { className: "bg-blue-50/70 border-b border-slate-300" },
+                            React.createElement(
+                              "td",
+                              {
+                                colSpan: 3,
+                                className:
+                                  "p-1.5 font-bold uppercase text-[11px] text-blue-900 tracking-wide",
+                              },
+                              "1. TÊN NGƯỜI DÙNG / VỊ TRÍ PHÒNG BAN"
+                            )
+                          ),
+                          React.createElement(
+                            "tr",
+                            null,
+                            React.createElement(
+                              "td",
+                              {
+                                className:
+                                  "p-2 font-semibold text-slate-800 border-r border-slate-200 bg-slate-50/50",
+                              },
+                              "Tên máy tính"
+                            ),
+                            React.createElement(
+                              "td",
+                              {
+                                className:
+                                  "p-2 font-mono font-medium text-slate-900 border-r border-slate-200",
+                              },
+                              comp.hostname
+                            ),
+                            React.createElement(
+                              "td",
+                              { className: "p-2 text-emerald-700 font-medium" },
+                              "Đã định danh hệ thống"
+                            )
+                          ),
+                          React.createElement(
+                            "tr",
+                            null,
+                            React.createElement(
+                              "td",
+                              {
+                                className:
+                                  "p-2 font-semibold text-slate-800 border-r border-slate-200 bg-slate-50/50",
+                              },
+                              "Họ và tên người dùng"
+                            ),
+                            (() => {
+                              const curUser = deviceInfoOverrides[comp.hostname]?.user !== undefined ? deviceInfoOverrides[comp.hostname].user : comp.user;
+                              return [
+                                React.createElement(
+                                  "td",
+                                  {
+                                    key: "user-val",
+                                    className:
+                                      "p-1 text-slate-900 border-r border-slate-200 font-medium",
+                                  },
+                                  React.createElement("input", {
+                                    type: "text",
+                                    value: curUser || "",
+                                    placeholder: "[Chưa có dữ liệu người dùng]",
+                                    onChange: (e) => {
+                                      const val = e.target.value;
+                                      setDeviceInfoOverrides((prev) => ({
+                                        ...prev,
+                                        [comp.hostname]: { ...prev[comp.hostname], user: val },
+                                      }));
+                                    },
+                                    className:
+                                      "w-full text-xs text-slate-900 bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1.5 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
+                                    title: "Nhấn để sửa Họ và tên người dùng",
+                                  })
+                                ),
+                                React.createElement(
+                                  "td",
+                                  {
+                                    key: "user-status",
+                                    className: curUser
+                                      ? "p-2 text-emerald-700 font-medium"
+                                      : "p-2 text-slate-600",
+                                  },
+                                  curUser
+                                    ? "Đã phân bổ nhân sự tiếp nhận"
+                                    : "Cần bổ sung nhân sự tiếp nhận"
+                                )
+                              ];
+                            })()
+                          ),
+                          React.createElement(
+                            "tr",
+                            null,
+                            React.createElement(
+                              "td",
+                              {
+                                className:
+                                  "p-2 font-semibold text-slate-800 border-r border-slate-200 bg-slate-50/50",
+                              },
+                              "Vị trí / Phòng ban"
+                            ),
+                            (() => {
+                              const curDept = deviceInfoOverrides[comp.hostname]?.department !== undefined ? deviceInfoOverrides[comp.hostname].department : comp.department;
+                              return [
+                                React.createElement(
+                                  "td",
+                                  {
+                                    key: "dept-val",
+                                    className:
+                                      "p-1 text-slate-900 border-r border-slate-200 font-medium",
+                                  },
+                                  React.createElement("input", {
+                                    type: "text",
+                                    value: curDept || "",
+                                    placeholder: "[Chưa có dữ liệu phòng ban]",
+                                    onChange: (e) => {
+                                      const val = e.target.value;
+                                      setDeviceInfoOverrides((prev) => ({
+                                        ...prev,
+                                        [comp.hostname]: { ...prev[comp.hostname], department: val },
+                                      }));
+                                    },
+                                    className:
+                                      "w-full text-xs text-slate-900 bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1.5 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
+                                    title: "Nhấn để sửa Vị trí / Phòng ban",
+                                  })
+                                ),
+                                React.createElement(
+                                  "td",
+                                  {
+                                    key: "dept-status",
+                                    className: curDept
+                                      ? "p-2 text-emerald-700 font-medium"
+                                      : "p-2 text-slate-600",
+                                  },
+                                  curDept
+                                    ? "Đã ghi nhận phòng ban quản lý"
+                                    : "Cần bổ sung thông tin quản lý"
+                                )
+                              ];
+                            })()
+                          ),
+
+                          // 2. CẤU HÌNH PHẦN CỨNG
+                          React.createElement(
+                            "tr",
+                            { className: "bg-blue-50/70 border-b border-slate-300" },
+                            React.createElement(
+                              "td",
+                              {
+                                colSpan: 3,
+                                className:
+                                  "p-1.5 font-bold uppercase text-[11px] text-blue-900 tracking-wide",
+                              },
+                              "2. CẤU HÌNH PHẦN CỨNG"
+                            )
+                          ),
+                          compactHardware
+                            ? React.createElement(
+                                "tr",
+                                null,
+                                React.createElement(
+                                  "td",
+                                  {
+                                    className:
+                                      "p-2 font-semibold text-slate-800 border-r border-slate-200 bg-slate-50/50",
+                                  },
+                                  "Tóm tắt cấu hình máy tính"
+                                ),
+                                React.createElement(
+                                  "td",
+                                  {
+                                    className:
+                                      "p-2 text-slate-900 border-r border-slate-200 font-medium leading-relaxed",
+                                  },
+                                  details.oneLineSummary
+                                ),
+                                React.createElement(
+                                  "td",
+                                  { className: "p-2 text-emerald-700 font-medium" },
+                                  "Đáp ứng tốt tác vụ văn phòng"
+                                )
+                              )
+                            : React.createElement(
+                                React.Fragment,
+                                null,
+                                React.createElement(
+                                  "tr",
+                                  null,
+                                  React.createElement(
+                                    "td",
+                                    {
+                                      className:
+                                        "p-2 font-semibold text-slate-800 border-r border-slate-200 bg-slate-50/50",
+                                    },
+                                    "Laptop / Model"
+                                  ),
+                                  React.createElement(
+                                    "td",
+                                    {
+                                      className:
+                                        "p-2 text-slate-900 border-r border-slate-200 font-medium",
+                                    },
+                                    details.modelText
+                                  ),
+                                  React.createElement(
+                                    "td",
+                                    { className: "p-2 text-slate-700" },
+                                    "Dòng laptop văn phòng / máy trạm"
+                                  )
+                                ),
+                                React.createElement(
+                                  "tr",
+                                  null,
+                                  React.createElement(
+                                    "td",
+                                    {
+                                      className:
+                                        "p-2 font-semibold text-slate-800 border-r border-slate-200 bg-slate-50/50",
+                                    },
+                                    "CPU"
+                                  ),
+                                  React.createElement(
+                                    "td",
+                                    {
+                                      className:
+                                        "p-2 text-slate-900 border-r border-slate-200 font-medium",
+                                    },
+                                    details.cpuText
+                                  ),
+                                  React.createElement(
+                                    "td",
+                                    { className: "p-2 text-emerald-700 font-medium" },
+                                    "Đáp ứng tốt tác vụ văn phòng"
+                                  )
+                                ),
+                                React.createElement(
+                                  "tr",
+                                  null,
+                                  React.createElement(
+                                    "td",
+                                    {
+                                      className:
+                                        "p-2 font-semibold text-slate-800 border-r border-slate-200 bg-slate-50/50",
+                                    },
+                                    "RAM"
+                                  ),
+                                  React.createElement(
+                                    "td",
+                                    {
+                                      className:
+                                        "p-2 text-slate-900 border-r border-slate-200 font-medium",
+                                    },
+                                    details.ramText
+                                  ),
+                                  React.createElement(
+                                    "td",
+                                    { className: "p-2 text-slate-700" },
+                                    "Đạt chuẩn vận hành văn phòng"
+                                  )
+                                ),
+                                React.createElement(
+                                  "tr",
+                                  null,
+                                  React.createElement(
+                                    "td",
+                                    {
+                                      className:
+                                        "p-2 font-semibold text-slate-800 border-r border-slate-200 bg-slate-50/50",
+                                    },
+                                    "Ổ cứng"
+                                  ),
+                                  React.createElement(
+                                    "td",
+                                    {
+                                      className:
+                                        "p-2 text-slate-900 border-r border-slate-200 font-medium",
+                                    },
+                                    details.diskText
+                                  ),
+                                  React.createElement(
+                                    "td",
+                                    { className: "p-2 text-emerald-700 font-medium" },
+                                    "Tình trạng Healthy, dung lượng đáp ứng tốt"
+                                  )
+                                )
+                              ),
+
+                          // 3. DANH SÁCH PHẦN MỀM CÀI ĐẶT TRÊN MÁY
+                          React.createElement(
+                            "tr",
+                            { className: "bg-blue-50/70 border-b border-slate-300" },
+                            React.createElement(
+                              "td",
+                              {
+                                colSpan: 3,
+                                className:
+                                  "p-1.5 font-bold uppercase text-[11px] text-blue-900 tracking-wide",
+                              },
+                              "3. DANH SÁCH PHẦN MỀM CÀI ĐẶT TRÊN MÁY"
+                            )
+                          ),
+                          React.createElement(
+                            "tr",
+                            null,
+                            React.createElement(
+                              "td",
+                              { colSpan: 3, className: "p-0" },
+                              React.createElement(
+                                "table",
+                                { className: "w-full text-left border-collapse text-xs" },
+                                React.createElement(
+                                  "thead",
+                                  null,
+                                  React.createElement(
+                                    "tr",
+                                    {
+                                      className:
+                                        "bg-slate-100/80 text-slate-800 font-bold border-b border-slate-300 text-[11px]",
+                                    },
+                                    React.createElement(
+                                      "th",
+                                      {
+                                        className:
+                                          "p-2 border-r border-slate-300 text-center w-10 font-bold",
+                                      },
+                                      "STT"
+                                    ),
+                                    React.createElement(
+                                      "th",
+                                      {
+                                        className:
+                                          "p-2 border-r border-slate-300 font-bold",
+                                      },
+                                      "Tên Phần Mềm"
+                                    ),
+                                    React.createElement(
+                                      "th",
+                                      {
+                                        className:
+                                          "p-2 border-r border-slate-300 w-32 font-bold",
+                                      },
+                                      "Phân Loại"
+                                    ),
+                                    React.createElement(
+                                      "th",
+                                      {
+                                        className:
+                                          "p-2 border-r border-slate-300 w-36 font-bold",
+                                      },
+                                      "Hãng Sản Xuất"
+                                    ),
+                                    React.createElement(
+                                      "th",
+                                      {
+                                        className:
+                                          "p-2 border-r border-slate-300 w-44 font-bold",
+                                      },
+                                      "Loại Bản Quyền"
+                                    ),
+                                    React.createElement(
+                                      "th",
+                                      { className: "p-2 w-48 font-bold" },
+                                      "Đánh Giá Sơ Bộ"
+                                    )
+                                  )
+                                ),
+                                React.createElement(
+                                  "tbody",
+                                  { className: "divide-y divide-slate-200" },
+                                  filteredItems.length === 0
+                                    ? React.createElement(
+                                        "tr",
+                                        null,
+                                        React.createElement(
+                                          "td",
+                                          {
+                                            colSpan: 6,
+                                            className:
+                                              "p-4 text-center text-slate-500 italic",
+                                          },
+                                          "Không có phần mềm nào phù hợp với bộ lọc đã chọn."
+                                        )
+                                      )
+                                    : filteredItems.map((item, idx) =>
+                                        React.createElement(
+                                          "tr",
+                                          {
+                                            key: idx,
+                                            className: item.isOS
+                                              ? "bg-blue-50/30 hover:bg-blue-50/50"
+                                              : "hover:bg-slate-50",
+                                          },
+                                          React.createElement(
+                                            "td",
+                                            {
+                                              className:
+                                                "p-2 text-center border-r border-slate-200 font-medium text-slate-600",
+                                            },
+                                            String(idx + 1).padStart(2, "0")
+                                          ),
+                                          React.createElement(
+                                            "td",
+                                            {
+                                              className:
+                                                "p-2 border-r border-slate-200 font-medium text-slate-900",
+                                            },
+                                            item.name,
+                                            item.version &&
+                                              React.createElement(
+                                                "span",
+                                                {
+                                                  className:
+                                                    "text-slate-500 font-normal ml-1",
+                                                },
+                                                `(${item.version})`
+                                              )
+                                          ),
+                                          (() => {
+                                            const itemKey = `${comp.hostname}::${item.isOS ? '__OS__' : item.name}`;
+                                            const curCategory = deviceSoftwareOverrides[itemKey]?.category !== undefined ? deviceSoftwareOverrides[itemKey].category : item.category;
+                                            const curLicense = deviceSoftwareOverrides[itemKey]?.licenseTypeLabel !== undefined ? deviceSoftwareOverrides[itemKey].licenseTypeLabel : item.licenseTypeLabel;
+                                            const curEvaluation = deviceSoftwareOverrides[itemKey]?.evaluation !== undefined ? deviceSoftwareOverrides[itemKey].evaluation : item.evaluation;
+
+                                            return [
+                                              React.createElement(
+                                                "td",
+                                                {
+                                                  key: "cat",
+                                                  className:
+                                                    "p-1 border-r border-slate-200 text-slate-700",
+                                                },
+                                                React.createElement("input", {
+                                                  type: "text",
+                                                  value: curCategory,
+                                                  onChange: (e) => {
+                                                    const val = e.target.value;
+                                                    setDeviceSoftwareOverrides((prev) => ({
+                                                      ...prev,
+                                                      [itemKey]: { ...prev[itemKey], category: val },
+                                                    }));
+                                                  },
+                                                  className:
+                                                    "w-full text-xs text-slate-700 bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
+                                                  title: "Nhấn để sửa Phân loại",
+                                                })
+                                              ),
+                                              React.createElement(
+                                                "td",
+                                                {
+                                                  key: "vendor",
+                                                  className:
+                                                    "p-2 border-r border-slate-200 text-slate-800 font-medium",
+                                                },
+                                                item.vendor
+                                              ),
+                                              React.createElement(
+                                                "td",
+                                                {
+                                                  key: "lic",
+                                                  className:
+                                                    "p-1 border-r border-slate-200 text-slate-800",
+                                                },
+                                                React.createElement("input", {
+                                                  type: "text",
+                                                  value: curLicense,
+                                                  onChange: (e) => {
+                                                    const val = e.target.value;
+                                                    setDeviceSoftwareOverrides((prev) => ({
+                                                      ...prev,
+                                                      [itemKey]: { ...prev[itemKey], licenseTypeLabel: val },
+                                                    }));
+                                                  },
+                                                  className:
+                                                    "w-full text-xs text-slate-800 bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
+                                                  title: "Nhấn để sửa Loại bản quyền",
+                                                })
+                                              ),
+                                              React.createElement(
+                                                "td",
+                                                {
+                                                  key: "eval",
+                                                  className: `p-1 ${item.evaluationClass}`,
+                                                },
+                                                React.createElement("input", {
+                                                  type: "text",
+                                                  value: curEvaluation,
+                                                  onChange: (e) => {
+                                                    const val = e.target.value;
+                                                    setDeviceSoftwareOverrides((prev) => ({
+                                                      ...prev,
+                                                      [itemKey]: { ...prev[itemKey], evaluation: val },
+                                                    }));
+                                                  },
+                                                  className:
+                                                    "w-full text-xs font-semibold bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
+                                                  title: "Nhấn để sửa Đánh giá sơ bộ / Khuyến nghị",
+                                                })
+                                              )
+                                            ];
+                                          })()
+                                        )
+                                      )
+                                )
+                              )
+                            )
+                          ),
+
+                          // Kiểm tra bản quyền KMS / Hosts
+                          React.createElement(
+                            "tr",
+                            { className: "bg-slate-50/70 border-t border-slate-300" },
+                            React.createElement(
+                              "td",
+                              {
+                                className:
+                                  "p-2 font-semibold text-slate-800 border-r border-slate-200",
+                              },
+                              "Kiểm tra bản quyền (KMS / Hosts)"
+                            ),
+                            React.createElement(
+                              "td",
+                              {
+                                className:
+                                  "p-2 font-mono text-slate-900 border-r border-slate-200 font-medium",
+                              },
+                              hasCrack
+                                ? `Phát hiện: ${crackInstalls
+                                    .map((c) => c.displayName || c.rawSoftwareName)
+                                    .join(", ")}`
+                                : "Clean (Port 1688 Closed, Hosts Clean)"
+                            ),
+                            React.createElement(
+                              "td",
+                              {
+                                className: hasCrack
+                                  ? "p-2 text-rose-700 font-bold"
+                                  : "p-2 text-emerald-700 font-medium",
+                              },
+                              hasCrack
+                                ? "Cảnh báo vi phạm bản quyền phần mềm bẻ khóa"
+                                : "An toàn, không dùng phần mềm bẻ khóa"
+                            )
+                          )
+                        )
+                      ),
+
+                      // Signatures & Footer
+                      React.createElement(
+                        "div",
+                        { className: "p-4 border-t border-slate-200 bg-slate-50/40" },
+                        React.createElement(
+                          "div",
+                          {
+                            className:
+                              "grid grid-cols-2 text-center text-xs print-avoid-break mb-3",
+                          },
+                          React.createElement(
+                            "div",
+                            null,
+                            React.createElement(
+                              "p",
+                              { className: "font-bold text-slate-800 uppercase" },
+                              "KỸ THUẬT VIÊN KIỂM TOÁN"
+                            ),
+                            React.createElement(
+                              "p",
+                              { className: "text-slate-400 italic text-[10px] mt-0.5" },
+                              "(Ký và ghi rõ họ tên)"
+                            ),
+                            React.createElement("div", { className: "h-12" })
+                          ),
+                          React.createElement(
+                            "div",
+                            null,
+                            React.createElement(
+                              "p",
+                              { className: "font-bold text-slate-800 uppercase" },
+                              "NGƯỜI DÙNG / ĐẠI DIỆN XÁC NHẬN"
+                            ),
+                            React.createElement(
+                              "p",
+                              { className: "text-slate-400 italic text-[10px] mt-0.5" },
+                              "(Ký và ghi rõ họ tên)"
+                            ),
+                            React.createElement("div", { className: "h-12" })
+                          )
+                        ),
+                        React.createElement(
+                          "div",
+                          {
+                            className:
+                              "border-t border-slate-200 pt-2 text-center text-[10px] text-slate-500 font-sans",
+                          },
+                          React.createElement(
+                            "p",
+                            { className: "font-medium" },
+                            "Hachihi SAM Pro • By hachihi.vn 0933842126"
+                          )
+                        )
+                      )
+                    ),
+                    compIdx < arr.length - 1 &&
+                      React.createElement("div", {
+                        className: "print-page-break my-6",
+                      })
+                  );
+                })
+              );
+            })()
+          )
         )
       )
     );

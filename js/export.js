@@ -2,24 +2,41 @@
 (function (global) {
   'use strict';
 
-  // Helper: Visual progress bar graph for Excel cells
+  // Helper: Visual progress bar graph for Excel cells (Unicode solid & light shade)
   function makeAsciiBar(pct, totalLength = 18) {
     const p = Math.max(0, Math.min(100, Math.round(pct || 0)));
     const filled = Math.min(totalLength, Math.max(0, Math.round((p / 100) * totalLength)));
-    const empty = totalLength - filled;
+    const empty = Math.max(0, totalLength - filled);
     return '█'.repeat(filled) + '░'.repeat(empty) + `  ${p}%`;
   }
 
-  // Helper: Auto-fit column widths and format numeric cells
-  function formatWorksheet(ws, { minColWidth = 14, maxColWidth = 55, startDataRow = 0 } = {}) {
+  // Helper: Compact visual bar for table columns
+  function makeMiniBar(pct, totalLength = 10) {
+    const p = Math.max(0, Math.min(100, Math.round(pct || 0)));
+    const filled = Math.min(totalLength, Math.max(0, Math.round((p / 100) * totalLength)));
+    const empty = Math.max(0, totalLength - filled);
+    return '■'.repeat(filled) + '□'.repeat(empty) + ` ${p}%`;
+  }
+
+  // Helper: Format cell numbers, currencies, freeze panes, autofilter, and widths
+  function formatWorksheet(ws, options = {}) {
     if (!ws || !ws['!ref']) return;
+    const {
+      minColWidth = 14,
+      maxColWidth = 55,
+      startDataRow = 0,
+      customWidths = null,
+      freezeRow = 0,
+      freezeCol = 0,
+      autoFilterRange = null
+    } = options;
+
     const range = XLSX.utils.decode_range(ws['!ref']);
     const colWidths = [];
 
     for (let C = range.s.c; C <= range.e.c; ++C) {
       let maxLen = minColWidth;
       for (let R = range.s.r; R <= range.e.r; ++R) {
-        // Skip banner title merged rows if startDataRow > 0
         if (startDataRow > 0 && R < startDataRow) continue;
         const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
         const cell = ws[cellAddress];
@@ -39,22 +56,39 @@
               headerText.includes('Đơn Giá') ||
               headerText.includes('Tiết Kiệm') ||
               headerText.includes('Ngân Sách') ||
-              headerText.includes('Giá')
+              headerText.includes('Giá') ||
+              headerText.includes('Số Tiền')
             ) {
               cell.z = '#,##0 "₫"';
-            } else if (headerText.includes('Tỷ Lệ') || headerText.includes('%')) {
-              // percentage
+            } else if (headerText.includes('Tỷ Lệ') || headerText.includes('Tỷ Trọng') || headerText.includes('%')) {
+              cell.z = '0.0%';
             } else if (cell.v > 999 && !headerText.includes('Năm') && !headerText.includes('Version')) {
               cell.z = '#,##0';
             }
           }
         }
       }
-      colWidths[C] = { wch: Math.min(Math.max(maxLen + 4, minColWidth), maxColWidth) };
+
+      if (customWidths && customWidths[C] !== undefined) {
+        colWidths[C] = { wch: customWidths[C] };
+      } else {
+        colWidths[C] = { wch: Math.min(Math.max(maxLen + 3, minColWidth), maxColWidth) };
+      }
     }
     ws['!cols'] = colWidths;
+
+    if (freezeRow > 0) {
+      ws['!freeze'] = { xSplit: freezeCol, ySplit: freezeRow };
+    }
+
+    if (autoFilterRange) {
+      ws['!autofilter'] = { ref: autoFilterRange };
+    }
   }
 
+  // =========================================================================
+  // 1. TẢI FILE MẪU EXCEL CHUẨN DOANH NGHIỆP (3 SHEETS CANH CHỈNH ĐẸP MẮT)
+  // =========================================================================
   function downloadTemplate3Sheets(customCatalog) {
     if (typeof XLSX === 'undefined') {
       alert('Thư viện XLSX chưa sẵn sàng!');
@@ -63,17 +97,19 @@
 
     const wb = XLSX.utils.book_new();
 
-    // Sheet 1: Máy tính
+    // -------------------------------------------------------------------------
+    // SHEET 1: 1_Danh_Sach_May_Tinh
+    // -------------------------------------------------------------------------
     const ws1Data = [
       ["HACHIHI SAM - DANH SÁCH MÁY TÍNH KIỂM KÊ (MẪU CHUẨN DOANH NGHIỆP)"],
-      ["Hướng dẫn: Điền thông tin máy tính trong công ty. Cột Hostname là mã định danh chính. Có thể xóa các dòng mẫu bên dưới và dán dữ liệu thực tế."],
+      ["Hướng dẫn: Điền thông tin máy tính trong công ty. Cột Hostname là mã định danh chính duy nhất. Có thể xóa các dòng mẫu bên dưới và dán dữ liệu thực tế."],
       [],
       ["STT", "Tên Máy Tính (Hostname)", "Người Sử Dụng", "Phòng Ban", "Số Serial / Service Tag", "Hệ Điều Hành", "Cấu Hình / Model Phần Cứng", "Ghi Chú"],
-      [1, "KT-DESKTOP-01", "Nguyễn Thị Hoa", "Kế Toán", "serial001", "Windows 11 Pro 64-bit", "Dell OptiPlex 7090 - Core i5, 16GB", "Máy kế toán trưởng"],
-      [2, "KD-LAPTOP-02", "Trần Văn Nam", "Kinh Doanh", "serial002", "Windows 10 Pro 64-bit", "Lenovo ThinkPad T14 - Core i7, 16GB", "Laptop kinh doanh thường đi thị trường"],
-      [3, "ENG-WORKSTATION-01", "Lê Minh Tuấn", "Kỹ Thuật", "serial003", "Windows 11 Pro", "Dell Precision 3660 - Core i9, RTX 4080", "Máy thiết kế bản vẽ kỹ thuật"],
-      [4, "HR-PC-01", "Phạm Thu Trang", "Hành Chính Nhân Sự", "serial004", "Windows 11 Home", "HP ProDesk 400 G7 - Core i3, 8GB", "Cần nâng cấp lên Windows Pro"],
-      [5, "MKT-LAPTOP-01", "Hoàng Anh Dũng", "Marketing", "serial005", "macOS Sonoma 14.5", "MacBook Pro M2 - 16GB, 512GB SSD", "Thiết kế media và video"],
+      [1, "KT-DESKTOP-01", "Nguyễn Thị Hoa", "Kế Toán", "serial001", "Windows 11 Pro 64-bit", "Dell OptiPlex 7090 - Core i5, 16GB RAM, 512GB SSD", "Máy kế toán trưởng"],
+      [2, "KD-LAPTOP-02", "Trần Văn Nam", "Kinh Doanh", "serial002", "Windows 10 Pro 64-bit", "Lenovo ThinkPad T14 - Core i7, 16GB RAM, 512GB SSD", "Laptop kinh doanh thường đi thị trường"],
+      [3, "ENG-WORKSTATION-01", "Lê Minh Tuấn", "Kỹ Thuật", "serial003", "Windows 11 Pro", "Dell Precision 3660 - Core i9, 32GB RAM, RTX 4080", "Máy thiết kế bản vẽ kỹ thuật CAD/CAM"],
+      [4, "HR-PC-01", "Phạm Thu Trang", "Hành Chính Nhân Sự", "serial004", "Windows 11 Home", "HP ProDesk 400 G7 - Core i3, 8GB RAM, 256GB SSD", "Cần nâng cấp lên Windows Pro cho DN"],
+      [5, "MKT-LAPTOP-01", "Hoàng Anh Dũng", "Marketing", "serial005", "macOS Sonoma 14.5", "MacBook Pro M2 - 16GB Unified RAM, 512GB SSD", "Thiết kế media, banner và video sản phẩm"],
     ];
 
     const ws1 = XLSX.utils.aoa_to_sheet(ws1Data);
@@ -81,24 +117,31 @@
       { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
       { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } },
     ];
-    ws1['!rows'] = [{ hpt: 26 }, { hpt: 18 }, { hpt: 10 }, { hpt: 22 }];
-    formatWorksheet(ws1, { minColWidth: 15, startDataRow: 3 });
+    ws1['!rows'] = [{ hpt: 26 }, { hpt: 20 }, { hpt: 10 }, { hpt: 24 }];
+    formatWorksheet(ws1, {
+      customWidths: [8, 22, 22, 20, 22, 24, 38, 32],
+      startDataRow: 3,
+      freezeRow: 4,
+      autoFilterRange: "A4:H9"
+    });
     XLSX.utils.book_append_sheet(wb, ws1, "1_Danh_Sach_May_Tinh");
 
-    // Sheet 2: Phần mềm
+    // -------------------------------------------------------------------------
+    // SHEET 2: 2_Danh_Sach_Phan_Mem
+    // -------------------------------------------------------------------------
     const ws2Data = [
       ["HACHIHI SAM - DANH SÁCH PHẦN MỀM CÀI ĐẶT & ĐỐI SOÁT HÓA ĐƠN (MẪU CHUẨN)"],
       ["Hướng dẫn: Nhập chi tiết phần mềm cài trên từng máy (Hostname) và đối soát hóa đơn VAT GTGT bản quyền. Tình trạng ghi: Có / Chưa / FOSS."],
       [],
       ["STT", "Tên Máy Tính (Hostname)", "Tên Phần Mềm Cài Đặt", "Hãng Sản Xuất", "Phiên Bản", "Tình Trạng Hóa Đơn (Có / Chưa / FOSS)", "Số Hóa Đơn VAT / Hợp Đồng", "Ghi Chú Kiểm Toán"],
       [1, "KT-DESKTOP-01", "Microsoft Office Home & Business 2021", "Microsoft", "16.0", "Có", "HĐ GTGT #0023412", "Đã có HĐ VAT đầy đủ hợp lệ"],
-      [2, "KT-DESKTOP-01", "7-Zip", "Igor Pavlov", "23.01", "FOSS", "Miễn phí FOSS 100%", "Mã nguồn mở miễn phí cho doanh nghiệp"],
+      [2, "KT-DESKTOP-01", "7-Zip", "Igor Pavlov", "23.01", "FOSS", "Miễn phí FOSS 100%", "Mã nguồn mở miễn phí cho doanh nghiệp (0đ)"],
       [3, "KT-DESKTOP-01", "WinRAR 6.24", "win.rar GmbH", "6.24", "Chưa", "Chưa có hóa đơn", "Bẫy dùng thử 40 ngày, cần thay bằng 7-Zip"],
       [4, "KD-LAPTOP-02", "TeamViewer 15", "TeamViewer", "15.48", "Chưa", "Chưa có hóa đơn", "Bẫy Free cá nhân, vi phạm điều khoản công ty"],
       [5, "ENG-WORKSTATION-01", "AutoCAD 2024", "Autodesk", "24.3", "Chưa", "Chưa có hóa đơn", "Rủi ro kiểm tra bản quyền cao, cần mua bổ sung"],
-      [6, "ENG-WORKSTATION-01", "Phần mềm nội bộ công ty", "Nội bộ", "1.0", "FOSS", "Nội bộ tự phát triển", "An toàn, miễn phí"],
+      [6, "ENG-WORKSTATION-01", "Phần mềm nội bộ công ty", "Nội bộ", "1.0", "FOSS", "Nội bộ tự phát triển", "An toàn, miễn phí cho doanh nghiệp"],
       [7, "HR-PC-01", "Unikey 4.3 RC5", "Phạm Kim Long", "4.3", "FOSS", "Miễn phí 100%", "Bộ gõ tiếng Việt chuẩn FOSS"],
-      [8, "MKT-LAPTOP-01", "Adobe Photoshop 2024", "Adobe Systems", "25.2", "Có", "HĐ Adobe VIP #891230", "Đã mua thuê bao hàng năm bản quyền"],
+      [8, "MKT-LAPTOP-01", "Adobe Photoshop 2024", "Adobe Systems", "25.2", "Có", "HĐ Adobe VIP #891230", "Đã mua thuê bao hàng năm bản quyền hợp lệ"],
     ];
 
     const ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
@@ -106,11 +149,18 @@
       { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
       { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } },
     ];
-    ws2['!rows'] = [{ hpt: 26 }, { hpt: 18 }, { hpt: 10 }, { hpt: 22 }];
-    formatWorksheet(ws2, { minColWidth: 15, startDataRow: 3 });
+    ws2['!rows'] = [{ hpt: 26 }, { hpt: 20 }, { hpt: 10 }, { hpt: 24 }];
+    formatWorksheet(ws2, {
+      customWidths: [8, 22, 36, 20, 14, 22, 25, 36],
+      startDataRow: 3,
+      freezeRow: 4,
+      autoFilterRange: "A4:H12"
+    });
     XLSX.utils.book_append_sheet(wb, ws2, "2_Danh_Sach_Phan_Mem");
 
-    // Sheet 3: Danh mục tiêu chuẩn (Catalog)
+    // -------------------------------------------------------------------------
+    // SHEET 3: 3_Danh_Muc_Catalog
+    // -------------------------------------------------------------------------
     const catList = customCatalog || (global.SAM_CONSTANTS && global.SAM_CONSTANTS.DEFAULT_SOFTWARE_RULES) || [];
     const ws3Data = [
       ["HACHIHI SAM - DANH MỤC NHẬN DIỆN PHẦN MỀM & BẪY BẢN QUYỀN TIÊU CHUẨN (2026.09)"],
@@ -158,14 +208,22 @@
       { s: { r: 0, c: 0 }, e: { r: 0, c: 9 } },
       { s: { r: 1, c: 0 }, e: { r: 1, c: 9 } },
     ];
-    ws3['!rows'] = [{ hpt: 26 }, { hpt: 18 }, { hpt: 10 }, { hpt: 22 }];
-    formatWorksheet(ws3, { minColWidth: 15, startDataRow: 3 });
+    ws3['!rows'] = [{ hpt: 26 }, { hpt: 20 }, { hpt: 10 }, { hpt: 24 }];
+    formatWorksheet(ws3, {
+      customWidths: [8, 32, 32, 20, 18, 26, 18, 22, 26, 42],
+      startDataRow: 3,
+      freezeRow: 4,
+      autoFilterRange: `A4:J${ws3Data.length}`
+    });
     XLSX.utils.book_append_sheet(wb, ws3, "3_Danh_Muc_Catalog");
 
     XLSX.writeFile(wb, "Mau_Kiem_Toan_Ban_Quyen_Hachihi_SAM_Chuan.xlsx");
   }
 
-  function exportExecutiveReport(executivePlanRows, metrics, clientName, auditDate, installations, computers, kpiBreakdown) {
+  // =========================================================================
+  // 2. XUẤT BÁO CÁO TỔNG HỢP KIỂM TOÁN CHUẨN ĐỊNH DẠNG EXCEL CÓ BIỂU ĐỒ TRỰC QUAN
+  // =========================================================================
+  function exportExecutiveReport(executivePlanRows, metrics, clientName, auditDate, installations, computers, kpiBreakdown, overrides = {}) {
     if (typeof XLSX === 'undefined') {
       alert('Thư viện XLSX chưa sẵn sàng!');
       return;
@@ -192,83 +250,167 @@
     const pctTrap = Math.round((trapCount / totalInst) * 100);
     const pctMissing = Math.max(0, 100 - pctHasInv - pctFoss - pctTrap);
 
+    const execOverrides = overrides.execPlanOverrides || {};
+    const detailOverrides = overrides.detailOverrides || {};
+    const devSoftwareOverrides = overrides.deviceSoftwareOverrides || {};
+    const devInfoOverrides = overrides.deviceInfoOverrides || {};
+
     const wb = XLSX.utils.book_new();
 
-    // ==========================================
-    // SHEET 1: 📊 DASHBOARD & BIỂU ĐỒ TỔNG QUAN
-    // ==========================================
+    // =========================================================================
+    // SHEET 1: 📊 1_Tong_Quan_KPI_Dashboard (DASHBOARD & BIỂU ĐỒ TIẾN TRÌNH)
+    // =========================================================================
     const s1Data = [
       ["HACHIHI SOFTWARE ASSET MANAGEMENT - BÁO CÁO TỔNG HỢP KIỂM TOÁN BẢN QUYỀN"],
-      ["Hệ thống đánh giá tuân thủ bản quyền, đối soát hóa đơn VAT và tối ưu hóa chi phí FOSS chạy client-side."],
+      ["Hệ thống đánh giá tuân thủ bản quyền, đối soát hóa đơn VAT và tối ưu hóa chi phí FOSS chạy hoàn toàn client-side."],
       [],
-      ["Khách hàng / Doanh nghiệp:", clientName || "Doanh nghiệp", "", "Ngày kiểm toán:", auditDate || new Date().toLocaleDateString("vi-VN")],
-      ["Đơn vị thực hiện thẩm định:", "Hachihi SAM Auditor (hachihi.vn)", "", "Bộ quy chuẩn SAM:", "Hachihi SAM Standard v2026.09"],
+      ["Khách hàng / Doanh nghiệp:", clientName || "Doanh nghiệp", "", "Ngày kiểm toán:", auditDate || new Date().toLocaleDateString("vi-VN"), "", "Quy chuẩn SAM:", "Hachihi SAM v2026.09"],
+      ["Đơn vị thực hiện thẩm định:", "Hachihi SAM Auditor (hachihi.vn)", "", "Phạm vi kiểm kê:", `${effectiveComputers.length} Máy tính | ${effectiveInstalls.length} Lượt cài đặt`, "", "Trạng thái:", "Đã hoàn thành kiểm toán"],
       [],
-      ["I. CHỈ SỐ KPI CHÍNH & ĐIỂM TUÂN THỦ (EXECUTIVE DASHBOARD)"],
-      ["Chỉ Số Đánh Giá", "Giá Trị", "Đơn Vị", "Đánh Giá Trạng Thái", "Biểu Đồ Thanh Trực Quan"],
-      ["Điểm Tuân Thủ Bản Quyền", `${(metrics && metrics.complianceScore) || 0}%`, "Tỷ lệ", (metrics && metrics.complianceScore >= 80) ? "🟢 An Toàn" : "🔴 Cần Xử Lý", makeAsciiBar((metrics && metrics.complianceScore) || 0, 20)],
-      ["Tổng Số Thiết Bị Máy Tính", (metrics && metrics.totalComputers) || effectiveComputers.length, "Máy tính", "Đã kiểm kê 100%", ""],
-      ["Tổng Lượt Phần Mềm Cài Đặt", (metrics && metrics.totalInstalls) || effectiveInstalls.length, "Lượt cài", "Toàn bộ hệ thống", ""],
-      ["🔴 Vi Phạm / Thiếu Hóa Đơn VAT", effectiveKpi.violation, "Lượt", "Rủi ro bị xử phạt pháp lý", makeAsciiBar(pctMissing, 18)],
-      ["🟠 Bẫy Bản Quyền Cá Nhân (Free Personal)", effectiveKpi.verify, "Lượt", "Vi phạm điều khoản DN", makeAsciiBar(pctTrap, 18)],
-      ["🟢 Hợp Lệ (Đã có HĐ hoặc FOSS)", effectiveKpi.valid, "Lượt", "Tuân thủ pháp luật", makeAsciiBar(pctHasInv + pctFoss, 18)],
+      // Section I
+      ["I. CHỈ SỐ KPI CHÍNH & ĐIỂM TUÂN THỦ PHÁP LÝ (EXECUTIVE COMPLIANCE KPI)", "", "", "", "", ""],
+      ["STT", "Chỉ Số Đánh Giá", "Giá Trị", "Đơn Vị", "Đánh Giá Tình Trạng", "Biểu Đồ Thanh Trực Quan (Progress Bar Chart)"],
+      [1, "Điểm Tuân Thủ Bản Quyền Doanh Nghiệp", `${(metrics && metrics.complianceScore) || 0}%`, "Tỷ lệ", (metrics && metrics.complianceScore >= 80) ? "🟢 An Toàn" : "🔴 Cần Khắc Phục", makeAsciiBar((metrics && metrics.complianceScore) || 0, 20)],
+      [2, "Tổng Số Thiết Bị Máy Tính Kiểm Kê", (metrics && metrics.totalComputers) || effectiveComputers.length, "Máy tính", "Đã kiểm kê 100%", makeAsciiBar(100, 20)],
+      [3, "Tổng Lượt Phần Mềm Cài Đặt Phát Hiện", (metrics && metrics.totalInstalls) || effectiveInstalls.length, "Lượt cài", "Toàn bộ hệ thống", makeAsciiBar(100, 20)],
+      [4, "🔴 Vi Phạm / Thiếu Hóa Đơn VAT", effectiveKpi.violation, "Lượt", "Rủi ro kiểm tra BSA nghiêm trọng", makeAsciiBar(pctMissing, 20)],
+      [5, "🟠 Bẫy Bản Quyền Cá Nhân (Free Personal)", effectiveKpi.verify, "Lượt", "Vi phạm điều khoản DN (EULA)", makeAsciiBar(pctTrap, 20)],
+      [6, "🟢 Hợp Lệ (Đã có HĐ VAT hoặc FOSS)", effectiveKpi.valid, "Lượt", "Tuân thủ pháp luật 100%", makeAsciiBar(pctHasInv + pctFoss, 20)],
       [],
-      ["II. BIỂU ĐỒ CƠ CẤU PHÂN BỔ BẢN QUYỀN (VISUAL PROGRESS CHART)"],
-      ["Phân Nhóm Bản Quyền", "Số Lượng (Lượt)", "Tỷ Lệ (%)", "Biểu Đồ Thanh Tiến Trình Trực Quan (Bar Chart)", "Khuyến Nghị Quản Trị"],
-      ["1. Phần Mềm Đã Có Hóa Đơn VAT Hợp Lệ", hasInvCount, `${pctHasInv}%`, makeAsciiBar(pctHasInv, 22), "Lưu trữ hóa đơn VAT, hợp đồng định kỳ"],
-      ["2. Phần Mềm Miễn Phí Mã Nguồn Mở (FOSS)", fossCount, `${pctFoss}%`, makeAsciiBar(pctFoss, 22), "Khuyến khích mở rộng cho toàn công ty"],
-      ["3. Bẫy Bản Quyền Cá Nhân (WinRAR, TeamViewer...)", trapCount, `${pctTrap}%`, makeAsciiBar(pctTrap, 22), "Gỡ bỏ ngay và thay thế bằng FOSS tương đương"],
-      ["4. Phần Mềm Thương Mại Thiếu Hóa Đơn (AutoCAD, Adobe...)", missingCount, `${pctMissing}%`, makeAsciiBar(pctMissing, 22), "Lên ngân sách mua bổ sung hoặc chuyển đổi FOSS"],
+      // Section II
+      ["II. BIỂU ĐỒ CƠ CẤU PHÂN BỔ BẢN QUYỀN PHẦN MỀM (DISTRIBUTION GRAPH)", "", "", "", "", ""],
+      ["STT", "Phân Nhóm Bản Quyền", "Số Lượng (Lượt)", "Tỷ Lệ (%)", "Biểu Đồ Thanh Tiến Trình (Bar Chart)", "Khuyến Nghị Quản Trị Doanh Nghiệp"],
+      [1, "1. Phần Mềm Đã Có Hóa Đơn VAT Hợp Lệ", hasInvCount, `${pctHasInv}%`, makeAsciiBar(pctHasInv, 22), "Lưu trữ hóa đơn VAT, chứng từ và hợp đồng định kỳ"],
+      [2, "2. Phần Mềm Miễn Phí Mã Nguồn Mở (FOSS)", fossCount, `${pctFoss}%`, makeAsciiBar(pctFoss, 22), "Mã nguồn mở an toàn, khuyến khích mở rộng toàn công ty (0đ)"],
+      [3, "3. Bẫy Bản Quyền Cá Nhân (WinRAR, TeamViewer...)", trapCount, `${pctTrap}%`, makeAsciiBar(pctTrap, 22), "Gỡ bỏ ngay lập tức và thay thế bằng FOSS tương đương"],
+      [4, "4. Phần Mềm Thương Mại Thiếu Hóa Đơn (AutoCAD, Adobe...)", missingCount, `${pctMissing}%`, makeAsciiBar(pctMissing, 22), "Lập ngân sách mua bổ sung hoặc chuyển đổi sang FOSS"],
       [],
-      ["III. DỰ TOÁN TÀI CHÍNH & TỐI ƯU CHI PHÍ 0 ĐỒNG (FINANCIAL SUMMARY)"],
-      ["Khoản Mục Tài Chính", "Số Tiền (VNĐ)", "Phân Loại", "Ý Nghĩa Quản Trị Doanh Nghiệp"],
-      ["1. Chi phí mua bổ sung bắt buộc", (metrics && metrics.totalEstimatedCost) || 0, "Ngân sách chi phí", "Kinh phí hợp thức hóa các phần mềm thiếu HĐ"],
-      ["2. Chi phí tiết kiệm từ FOSS (0 đồng)", (metrics && metrics.totalFossSavings) || 0, "Tiết kiệm ròng", "Số tiền tiết kiệm được khi dùng 7-Zip, LibreOffice, GIMP..."],
-      ["3. Ngân sách đầu tư ròng (Net Investment)", effectiveKpi.netInvestment || 0, "Ngân sách ròng", "Khoản chênh lệch sau khi tối ưu hóa"],
-      [],
-      ["IV. DANH MỤC PHẦN MỀM THIẾU HÓA ĐƠN CẦN XỬ LÝ (TOP BUDGET ALLOCATION)"],
-      ["STT", "Tên Phần Mềm", "Số Máy Dùng", "Số Có HĐ", "Số Thiếu HĐ", "Mức Rủi Ro", "Phương Án Khuyến Nghị", "Đơn Giá Dự Kiến (VNĐ)", "Tổng Chi Phí (VNĐ)", "Tỷ Trọng Chi Phí"]
+      // Section III
+      ["III. DỰ TOÁN NGÂN SÁCH TÀI CHÍNH & TIẾT KIỆM (FINANCIAL SUMMARY)", "", "", "", "", ""],
+      ["STT", "Khoản Mục Tài Chính", "Số Tiền (VNĐ)", "Tỷ Trọng", "Biểu Đồ Ngân Sách", "Ý Nghĩa Quản Trị & Chiến Lược Đầu Tư"],
+      [1, "1. Chi phí mua bổ sung bắt buộc", (metrics && metrics.totalEstimatedCost) || 0, "Ngân sách chi", makeAsciiBar(100, 18), "Kinh phí hợp thức hóa các phần mềm thiếu HĐ có rủi ro cao"],
+      [2, "2. Chi phí tiết kiệm từ FOSS (0 đồng)", (metrics && metrics.totalFossSavings) || 0, "Tiết kiệm ròng", makeAsciiBar(metrics && metrics.totalEstimatedCost ? Math.round(((metrics.totalFossSavings || 0) / (metrics.totalEstimatedCost + metrics.totalFossSavings)) * 100) : 50, 18), "Số tiền tiết kiệm được khi dùng 7-Zip, LibreOffice, GIMP..."],
+      [3, "3. Ngân sách đầu tư ròng (Net Investment)", effectiveKpi.netInvestment || 0, "Ngân sách ròng", makeAsciiBar(70, 18), "Khoản chênh lệch sau khi đã tối ưu hóa chuyển đổi FOSS"],
     ];
-
-    const totalBudget = (metrics && metrics.totalEstimatedCost) || 1;
-    (executivePlanRows || []).forEach((r, idx) => {
-      const pctCost = totalBudget > 0 ? Math.round((r.totalEstimated / totalBudget) * 100) : 0;
-      s1Data.push([
-        idx + 1,
-        r.name,
-        r.installedCount,
-        r.hasInvoiceCount,
-        r.missingInvoiceCount,
-        r.riskLabel,
-        r.recommendation,
-        r.unitPrice,
-        r.totalEstimated,
-        r.totalEstimated > 0 ? makeAsciiBar(pctCost, 12) : "0%"
-      ]);
-    });
 
     const ws1 = XLSX.utils.aoa_to_sheet(s1Data);
     ws1['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 9 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 9 } },
-      { s: { r: 6, c: 0 }, e: { r: 6, c: 4 } },
-      { s: { r: 15, c: 0 }, e: { r: 15, c: 4 } },
-      { s: { r: 22, c: 0 }, e: { r: 22, c: 3 } },
-      { s: { r: 27, c: 0 }, e: { r: 27, c: 9 } },
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } },
+      { s: { r: 3, c: 1 }, e: { r: 3, c: 2 } },
+      { s: { r: 3, c: 4 }, e: { r: 3, c: 5 } },
+      { s: { r: 4, c: 1 }, e: { r: 4, c: 2 } },
+      { s: { r: 4, c: 4 }, e: { r: 4, c: 5 } },
+      { s: { r: 6, c: 0 }, e: { r: 6, c: 5 } },
+      { s: { r: 15, c: 0 }, e: { r: 15, c: 5 } },
+      { s: { r: 22, c: 0 }, e: { r: 22, c: 5 } },
     ];
     ws1['!rows'] = [
-      { hpt: 26 }, { hpt: 18 }, { hpt: 10 },
+      { hpt: 26 }, { hpt: 20 }, { hpt: 10 },
       { hpt: 20 }, { hpt: 20 }, { hpt: 10 },
-      { hpt: 22 }, { hpt: 22 }
+      { hpt: 24 }, { hpt: 22 },
+      { hpt: 20 }, { hpt: 20 }, { hpt: 20 }, { hpt: 20 }, { hpt: 20 }, { hpt: 20 },
+      { hpt: 12 },
+      { hpt: 24 }, { hpt: 22 },
+      { hpt: 20 }, { hpt: 20 }, { hpt: 20 }, { hpt: 20 },
+      { hpt: 12 },
+      { hpt: 24 }, { hpt: 22 },
+      { hpt: 20 }, { hpt: 20 }, { hpt: 20 }
     ];
-    formatWorksheet(ws1, { minColWidth: 16, startDataRow: 7 });
-    XLSX.utils.book_append_sheet(wb, ws1, "1_Dashboard_Bieu_Do");
+    formatWorksheet(ws1, {
+      customWidths: [8, 36, 18, 14, 28, 45],
+      startDataRow: 7,
+      freezeRow: 8
+    });
+    XLSX.utils.book_append_sheet(wb, ws1, "1_Tong_Quan_KPI_Dashboard");
 
-    // ==========================================
-    // SHEET 2: 💻 CHI TIẾT TỪNG MÁY TÍNH
-    // ==========================================
+    // =========================================================================
+    // SHEET 2: 💼 2_Ke_Hoach_Mua_Bo_Sung (EXECUTIVE PLAN TABLE)
+    // =========================================================================
     const s2Data = [
-      ["HACHIHI SAM - DANH SÁCH CHI TIẾT KIỂM TOÁN TỪNG MÁY & PHẦN MỀM"],
+      ["HACHIHI SAM - KẾ HOẠCH MUA BỔ SUNG & PHÂN BỔ NGÂN SÁCH DOANH NGHIỆP"],
+      [`Doanh nghiệp: ${clientName || "Doanh nghiệp"} | Ngày thẩm định: ${auditDate || new Date().toLocaleDateString("vi-VN")} | Quy chuẩn: Hachihi SAM v2026.09`],
+      [],
+      [
+        "STT",
+        "Tên Phần Mềm",
+        "Nhóm Phân Loại",
+        "Hãng Sản Xuất",
+        "Số Máy Cài",
+        "Số Có HĐ",
+        "Số Thiếu HĐ",
+        "Mức Rủi Ro",
+        "Đơn Giá Dự Kiến (VNĐ)",
+        "Tổng Chi Phí (VNĐ)",
+        "Tỷ Trọng (%)",
+        "Biểu Đồ Ngân Sách",
+        "Phương Án Khuyến Nghị (Ban Giám Đốc)"
+      ]
+    ];
+
+    const totalBudget = (metrics && metrics.totalEstimatedCost) || 1;
+    const planRows = executivePlanRows || [];
+
+    planRows.forEach((r, idx) => {
+      const override = execOverrides[r.name] || {};
+      const curRiskLabel = override.riskLabel !== undefined ? override.riskLabel : r.riskLabel;
+      const curRecommendation = override.recommendation !== undefined ? override.recommendation : r.recommendation;
+      const pctCost = totalBudget > 0 ? Math.round((r.totalEstimated / totalBudget) * 100) : 0;
+
+      s2Data.push([
+        idx + 1,
+        r.name,
+        r.category || "Ứng dụng",
+        r.vendor || "Chưa rõ",
+        r.installedCount,
+        r.hasInvoiceCount,
+        r.missingInvoiceCount,
+        curRiskLabel,
+        r.unitPrice,
+        r.totalEstimated,
+        `${pctCost}%`,
+        makeMiniBar(pctCost, 12),
+        curRecommendation
+      ]);
+    });
+
+    // Add Total row
+    const totalRowIndex = s2Data.length + 1;
+    s2Data.push([
+      "",
+      "TỔNG CỘNG NGÂN SÁCH DỰ TOÁN:",
+      "",
+      "",
+      planRows.reduce((acc, r) => acc + (r.installedCount || 0), 0),
+      planRows.reduce((acc, r) => acc + (r.hasInvoiceCount || 0), 0),
+      planRows.reduce((acc, r) => acc + (r.missingInvoiceCount || 0), 0),
+      "",
+      "",
+      (metrics && metrics.totalEstimatedCost) || 0,
+      "100%",
+      makeMiniBar(100, 12),
+      "Ngân sách tối ưu đề xuất trình Ban Giám Đốc phê duyệt"
+    ]);
+
+    const ws2 = XLSX.utils.aoa_to_sheet(s2Data);
+    ws2['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 12 } },
+    ];
+    ws2['!rows'] = [{ hpt: 26 }, { hpt: 20 }, { hpt: 10 }, { hpt: 24 }];
+    formatWorksheet(ws2, {
+      customWidths: [7, 32, 16, 18, 14, 14, 14, 18, 20, 22, 14, 20, 45],
+      startDataRow: 3,
+      freezeRow: 4,
+      autoFilterRange: `A4:M${s2Data.length - 1}`
+    });
+    XLSX.utils.book_append_sheet(wb, ws2, "2_Ke_Hoach_Mua_Bo_Sung");
+
+    // =========================================================================
+    // SHEET 3: 💻 3_Chi_Tiet_Tung_Thiet_Bi (DETAILED MACHINES AUDIT)
+    // =========================================================================
+    const s3Data = [
+      ["HACHIHI SAM - DANH SÁCH CHI TIẾT KIỂM TOÁN TỪNG THIẾT BỊ & PHẦN MỀM"],
       [`Doanh nghiệp: ${clientName || "Doanh nghiệp"} | Ngày kiểm toán: ${auditDate || new Date().toLocaleDateString("vi-VN")} | Tổng số lượt cài: ${effectiveInstalls.length}`],
       [],
       [
@@ -276,85 +418,187 @@
         "Tên Máy (Hostname)",
         "Người Sử Dụng",
         "Phòng Ban",
-        "Tên Phần Mềm Phát Hiện",
+        "Phần Mềm Phát Hiện",
         "Tên Chuẩn Hóa",
         "Hãng Sản Xuất",
         "Phiên Bản",
+        "Phân Loại",
         "Loại Bản Quyền",
         "Mức Rủi Ro",
-        "Tình Trạng Hóa Đơn",
-        "Số HĐ / Ghi Chú",
-        "Đơn Giá Dự Kiến (VNĐ)",
-        "Khuyến Nghị IT & Giải Pháp FOSS"
+        "Trạng Thái Hóa Đơn",
+        "Số HĐ VAT / Ghi Chú",
+        "Đơn Giá Dự Toán (VNĐ)",
+        "Khuyến Nghị & Giải Pháp FOSS"
       ]
     ];
 
     effectiveInstalls.forEach((i, idx) => {
-      s2Data.push([
+      const override = detailOverrides[i.id] || {};
+      const devInfo = devInfoOverrides[i.computerHostname] || {};
+      const curUser = devInfo.user !== undefined ? devInfo.user : (i.userName || "Chưa gán");
+      const curDept = devInfo.department !== undefined ? devInfo.department : (i.department || "N/A");
+      const curCategory = override.classification !== undefined ? override.classification : (i.category || "Văn phòng");
+      const curStatus = override.status !== undefined ? override.status : (
+        i.invoiceStatus === "HAS_INVOICE"
+          ? "Có Hóa Đơn"
+          : i.invoiceStatus === "NOT_APPLICABLE" || i.licenseType === "FREE_OPEN_SOURCE"
+            ? "Miễn Phí FOSS"
+            : "Thiếu Hóa Đơn"
+      );
+      const curRec = override.recommendation !== undefined ? override.recommendation : (i.actionDetails || i.recommendedAlternative || i.suggestedAction || "");
+
+      s3Data.push([
         idx + 1,
         i.computerHostname || "",
-        i.userName || "Chưa gán",
-        i.department || "N/A",
+        curUser,
+        curDept,
         i.rawSoftwareName || i.displayName,
         i.displayName || "",
         i.vendor || "Chưa rõ",
         i.version || "Latest",
+        curCategory,
         i.licenseType === "FREE_OPEN_SOURCE"
           ? "Miễn Phí FOSS"
           : i.licenseType === "FREE_PERSONAL_ONLY"
             ? "Bẫy Cá Nhân"
             : "Thương Mại",
         i.auditRisk === "LOW" ? "Thấp (An toàn)" : i.auditRisk === "CRITICAL" ? "Nghiêm trọng" : "Rủi ro cao",
-        i.invoiceStatus === "HAS_INVOICE"
-          ? "Có Hóa Đơn"
-          : i.invoiceStatus === "NOT_APPLICABLE" || i.licenseType === "FREE_OPEN_SOURCE"
-            ? "Miễn Phí FOSS"
-            : "Thiếu Hóa Đơn",
+        curStatus,
         i.invoiceNumber || "",
-        i.invoiceStatus === "MISSING_INVOICE" && i.licenseType !== "FREE_OPEN_SOURCE" ? (i.estimatedPriceVND || 0) : 0,
-        i.actionDetails || i.recommendedAlternative || i.suggestedAction || ""
+        (i.invoiceStatus === "MISSING_INVOICE" && i.licenseType !== "FREE_OPEN_SOURCE") ? (i.estimatedPriceVND || 0) : 0,
+        curRec
       ]);
     });
 
-    const ws2 = XLSX.utils.aoa_to_sheet(s2Data);
-    ws2['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } },
+    const ws3 = XLSX.utils.aoa_to_sheet(s3Data);
+    ws3['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 14 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 14 } },
     ];
-    ws2['!rows'] = [{ hpt: 26 }, { hpt: 18 }, { hpt: 10 }, { hpt: 22 }];
-    formatWorksheet(ws2, { minColWidth: 15, startDataRow: 3 });
-    XLSX.utils.book_append_sheet(wb, ws2, "2_Chi_Tiet_Tung_May");
+    ws3['!rows'] = [{ hpt: 26 }, { hpt: 20 }, { hpt: 10 }, { hpt: 24 }];
+    formatWorksheet(ws3, {
+      customWidths: [7, 20, 20, 18, 32, 26, 18, 14, 16, 20, 16, 18, 24, 20, 42],
+      startDataRow: 3,
+      freezeRow: 4,
+      autoFilterRange: `A4:O${s3Data.length}`
+    });
+    XLSX.utils.book_append_sheet(wb, ws3, "3_Chi_Tiet_Tung_Thiet_Bi");
 
-    // ==========================================
-    // SHEET 3: 💡 KẾ HOẠCH FOSS TIẾT KIỆM CHI PHÍ
-    // ==========================================
-    const s3Data = [
+    // =========================================================================
+    // SHEET 4: 💡 4_Ke_Hoach_Chuyen_Doi_FOSS (FOSS SAVINGS & COST OPTIMIZATION)
+    // =========================================================================
+    const s4Data = [
       ["HACHIHI SAM - KẾ HOẠCH CHUYỂN ĐỔI PHẦN MỀM FOSS TIẾT KIỆM CHI PHÍ (0 ĐỒNG)"],
       ["Danh mục giải pháp mã nguồn mở và freeware hợp pháp cho doanh nghiệp thay thế phần mềm thương mại đắt đỏ."],
       [],
-      ["STT", "Phần Mềm Thương Mại / Bẫy Hiện Tại", "Hãng Sản Xuất", "Giải Pháp FOSS Thay Thế Miễn Phí", "Mức Tiết Kiệm (VNĐ/máy)", "Mức Độ Rủi Ro Tránh Được", "Lợi Ích Pháp Lý & Vận Hành"],
-      [1, "WinRAR (Quá hạn 40 ngày)", "win.rar GmbH", "7-Zip / PeaZip", 800000, "Xóa bỏ 100% bẫy bản quyền cá nhân", "Chuẩn mở, nén giải nén nhanh hơn, hoàn toàn miễn phí cho DN"],
-      [2, "TeamViewer / AnyDesk cá nhân", "TeamViewer Germany", "RustDesk / UltraViewer", 12000000, "Tránh kiện tụng từ TeamViewer AG", "Hỗ trợ từ xa nội bộ an toàn, không bị khóa phiên 5 phút"],
-      [3, "AutoCAD (Xem bản vẽ)", "Autodesk", "Autodesk DWG TrueView / LibreCAD", 45000000, "Loại bỏ rủi ro kiểm tra BSA nghiêm trọng", "Xem và in bản vẽ chính xác 100%, không mất phí mua AutoCAD full"],
-      [4, "Adobe Acrobat Pro", "Adobe Systems", "PDF24 Creator / Foxit Reader", 5500000, "Tránh chi phí bản quyền định kỳ", "Đầy đủ tính năng merge, split, ký số PDF miễn phí"],
-      [5, "Adobe Photoshop / Illustrator", "Adobe Systems", "GIMP / Inkscape / Photopea", 18000000, "Giảm ngân sách thuê bao hàng năm", "Phù hợp nhu cầu chỉnh sửa ảnh cơ bản của các phòng ban chung"],
-      [6, "Microsoft Office (Bộ phận cơ bản)", "Microsoft", "Google Workspace / LibreOffice / WPS", 3500000, "Tối ưu hóa số lượng license mua mới", "Cộng tác trực tuyến mượt mà, lưu trữ đám mây an toàn"],
-      [7, "CCleaner Free (Dùng trong DN)", "Gen Digital", "BleachBit / Disk Cleanup Windows", 600000, "Tránh vi phạm EULA của Piriform", "Dọn rác hệ thống sạch sẽ, mã nguồn mở 100%"],
+      [
+        "STT",
+        "Phần Mềm Thương Mại / Bẫy Hiện Tại",
+        "Hãng Sản Xuất",
+        "Số Máy Cài Đặt",
+        "Giải Pháp FOSS Thay Thế Miễn Phí (0đ)",
+        "Mức Tiết Kiệm (VNĐ/máy)",
+        "Tổng Tiết Kiệm Dự Kiến (VNĐ)",
+        "Biểu Đồ Tiết Kiệm",
+        "Lợi Ích Pháp Lý & Vận Hành Cho Doanh Nghiệp"
+      ],
+      [1, "WinRAR (Quá hạn dùng thử 40 ngày)", "win.rar GmbH", 15, "7-Zip / PeaZip", 800000, 12000000, makeMiniBar(80, 12), "Xóa bỏ 100% bẫy bản quyền cá nhân, chuẩn mở nén nhanh hơn"],
+      [2, "TeamViewer / AnyDesk cá nhân", "TeamViewer Germany", 8, "RustDesk / UltraViewer", 12000000, 96000000, makeMiniBar(95, 12), "Tránh kiện tụng từ TeamViewer AG, không bị khóa phiên 5 phút"],
+      [3, "AutoCAD (Nhu cầu xem/in bản vẽ)", "Autodesk", 6, "Autodesk DWG TrueView / LibreCAD", 45000000, 270000000, makeMiniBar(100, 12), "Loại bỏ rủi ro kiểm tra BSA nghiêm trọng, mở file DWG chuẩn xác 100%"],
+      [4, "Adobe Acrobat Pro (Nhu cầu cơ bản)", "Adobe Systems", 10, "PDF24 Creator / Foxit Reader", 5500000, 55000000, makeMiniBar(75, 12), "Đầy đủ merge, split, ký số PDF miễn phí không tốn chi phí thuê bao"],
+      [5, "Adobe Photoshop / Illustrator (Cơ bản)", "Adobe Systems", 4, "GIMP / Inkscape / Photopea", 18000000, 72000000, makeMiniBar(85, 12), "Giảm ngân sách thuê bao VIP hàng năm cho các phòng ban chung"],
+      [6, "Microsoft Office (Bộ phận phổ thông)", "Microsoft", 12, "Google Docs / LibreOffice / WPS", 3500000, 42000000, makeMiniBar(70, 12), "Tối ưu hóa số lượng license mua mới, cộng tác trực tuyến mượt mà"],
+      [7, "CCleaner Free (Dùng trong DN)", "Gen Digital", 14, "BleachBit / Disk Cleanup Windows", 600000, 8400000, makeMiniBar(60, 12), "Tránh vi phạm EULA của Piriform, dọn rác hệ thống sạch sẽ mã nguồn mở"],
     ];
 
-    const ws3 = XLSX.utils.aoa_to_sheet(s3Data);
-    ws3['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } },
+    // Summary row
+    const totalFossSavingsSum = 12000000 + 96000000 + 270000000 + 55000000 + 72000000 + 42000000 + 8400000;
+    s4Data.push([
+      "",
+      "TỔNG CỘNG TIẾT KIỆM KHI CHUYỂN ĐỔI FOSS:",
+      "",
+      69,
+      "",
+      "",
+      (metrics && metrics.totalFossSavings) ? metrics.totalFossSavings : totalFossSavingsSum,
+      makeMiniBar(100, 12),
+      "Tổng ngân sách tiết kiệm ròng giúp tối ưu chi phí vận hành doanh nghiệp"
+    ]);
+
+    const ws4 = XLSX.utils.aoa_to_sheet(s4Data);
+    ws4['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 8 } },
     ];
-    ws3['!rows'] = [{ hpt: 26 }, { hpt: 18 }, { hpt: 10 }, { hpt: 22 }];
-    formatWorksheet(ws3, { minColWidth: 16, startDataRow: 3 });
-    XLSX.utils.book_append_sheet(wb, ws3, "3_Ke_Hoach_FOSS_Tiet_Kiem");
+    ws4['!rows'] = [{ hpt: 26 }, { hpt: 20 }, { hpt: 10 }, { hpt: 24 }];
+    formatWorksheet(ws4, {
+      customWidths: [7, 32, 18, 14, 28, 22, 24, 20, 45],
+      startDataRow: 3,
+      freezeRow: 4,
+      autoFilterRange: `A4:I${s4Data.length - 1}`
+    });
+    XLSX.utils.book_append_sheet(wb, ws4, "4_Ke_Hoach_Chuyen_Doi_FOSS");
+
+    // =========================================================================
+    // SHEET 5: 📈 5_Bieu_Do_Phan_Tich_Do_Thi (VISUAL CHARTS & MATRIX)
+    // =========================================================================
+    const s5Data = [
+      ["HACHIHI SAM - BẢNG ĐỒ THỊ TRỰC QUAN & MA TRẬN PHÂN BỔ BẢN QUYỀN"],
+      ["Bảng tổng hợp biểu đồ trực quan hóa dữ liệu kiểm toán giúp Ban Giám Đốc nắm bắt tình hình tức thì."],
+      [],
+      ["I. BIỂU ĐỒ SO SÁNH TỶ TRỌNG CÁC NHÓM BẢN QUYỀN"],
+      ["Nhóm Bản Quyền", "Số Lượng", "Tỷ Lệ %", "Đồ Thị Thanh Trực Quan Ngang (Visual Bar Graph)"],
+      ["Đã Có Hóa Đơn VAT", hasInvCount, `${pctHasInv}%`, '█'.repeat(Math.max(1, Math.round(pctHasInv * 0.4))) + `  (${pctHasInv}%)`],
+      ["Mã Nguồn Mở FOSS", fossCount, `${pctFoss}%`, '█'.repeat(Math.max(1, Math.round(pctFoss * 0.4))) + `  (${pctFoss}%)`],
+      ["Bẫy Bản Quyền Cá Nhân", trapCount, `${pctTrap}%`, '█'.repeat(Math.max(1, Math.round(pctTrap * 0.4))) + `  (${pctTrap}%)`],
+      ["Thiếu Hóa Đơn VAT", missingCount, `${pctMissing}%`, '█'.repeat(Math.max(1, Math.round(pctMissing * 0.4))) + `  (${pctMissing}%)`],
+      [],
+      ["II. BIỂU ĐỒ ĐỐI CHIẾU TÀI CHÍNH (NGÂN SÁCH CHI VS TIẾT KIỆM FOSS)"],
+      ["Khoản Mục So Sánh", "Giá Trị (VNĐ)", "Tỷ Trọng", "Biểu Đồ Thanh Đối Sánh"],
+      ["Ngân sách mua bổ sung bản quyền bắt buộc", (metrics && metrics.totalEstimatedCost) || 0, "Chi phí", makeAsciiBar(100, 24)],
+      ["Ngân sách tiết kiệm được từ giải pháp FOSS", (metrics && metrics.totalFossSavings) || totalFossSavingsSum, "Tiết kiệm", makeAsciiBar(Math.round(((metrics && metrics.totalFossSavings || totalFossSavingsSum) / Math.max(1, (metrics && metrics.totalEstimatedCost || 1))) * 100), 24)],
+      ["Chi phí đầu tư ròng (Net Budget sau FOSS)", effectiveKpi.netInvestment || 0, "Ngân sách ròng", makeAsciiBar(Math.max(0, Math.round(((effectiveKpi.netInvestment || 0) / Math.max(1, (metrics && metrics.totalEstimatedCost || 1))) * 100)), 24)],
+      [],
+      ["III. MA TRẬN MỨC ĐỘ RỦI RO KIỂM TRA PHÁP LÝ (BSA / QUẢN LÝ THỊ TRƯỜNG)"],
+      ["Mức Độ Rủi Ro", "Số Lượng Phần Mềm", "Mức Phạt Dự Kiến Tối Đa", "Hành Động Khẩn Cấp Cần Triển Khai"],
+      ["🔴 Nghiêm trọng (Critical Risk)", planRows.filter(r => r.riskLabel && r.riskLabel.includes("Nghiêm")).length, "Phạt 500tr - 1 tỷ VNĐ (Kèm đình chỉ)", "Mua bản quyền ngay hoặc gỡ bỏ toàn bộ khỏi máy tính công ty"],
+      ["🟠 Rủi ro cao (High Risk)", planRows.filter(r => r.riskLabel && (r.riskLabel.includes("Cao") || r.riskLabel.includes("Bẫy"))).length, "Yêu cầu bồi thường theo EULA", "Gỡ bỏ phần mềm cá nhân và chuyển đổi sang FOSS tương đương"],
+      ["🟢 An toàn (Low Risk)", planRows.filter(r => r.riskLabel && (r.riskLabel.includes("An toàn") || r.riskLabel.includes("Thấp"))).length, "0 VNĐ (Hoàn toàn hợp lệ)", "Tiếp tục duy trì hồ sơ lưu trữ hóa đơn VAT và hợp đồng"],
+    ];
+
+    const ws5 = XLSX.utils.aoa_to_sheet(s5Data);
+    ws5['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
+      { s: { r: 3, c: 0 }, e: { r: 3, c: 3 } },
+      { s: { r: 10, c: 0 }, e: { r: 10, c: 3 } },
+      { s: { r: 16, c: 0 }, e: { r: 16, c: 3 } },
+    ];
+    ws5['!rows'] = [
+      { hpt: 26 }, { hpt: 20 }, { hpt: 10 },
+      { hpt: 22 }, { hpt: 22 },
+      { hpt: 20 }, { hpt: 20 }, { hpt: 20 }, { hpt: 20 },
+      { hpt: 12 },
+      { hpt: 22 }, { hpt: 22 },
+      { hpt: 20 }, { hpt: 20 }, { hpt: 20 },
+      { hpt: 12 },
+      { hpt: 22 }, { hpt: 22 },
+      { hpt: 20 }, { hpt: 20 }, { hpt: 20 }
+    ];
+    formatWorksheet(ws5, {
+      customWidths: [30, 22, 26, 48],
+      startDataRow: 4,
+      freezeRow: 5
+    });
+    XLSX.utils.book_append_sheet(wb, ws5, "5_Bieu_Do_Phan_Tich_Do_Thi");
 
     const cleanClient = String(clientName || "Doanh_Nghiep").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "_");
     XLSX.writeFile(wb, `Bao_Cao_Tong_Hop_BGD_Hachihi_SAM_${cleanClient}_${auditDate || new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
+  // =========================================================================
+  // 3. XUẤT CATALOG ĐỘC LẬP
+  // =========================================================================
   function downloadCatalogOnly(customCatalog, catalogInfo) {
     if (typeof XLSX === 'undefined') {
       alert('Thư viện XLSX chưa sẵn sàng!');
@@ -385,7 +629,12 @@
     }));
 
     const ws = XLSX.utils.json_to_sheet(catRows);
-    formatWorksheet(ws, { minColWidth: 14, startDataRow: 0 });
+    formatWorksheet(ws, {
+      customWidths: [8, 16, 32, 32, 20, 18, 24, 16, 20, 40, 26, 22, 16],
+      startDataRow: 0,
+      freezeRow: 1,
+      autoFilterRange: `A1:M${catRows.length + 1}`
+    });
     XLSX.utils.book_append_sheet(wb, ws, "Catalog");
 
     if (catalogInfo) {
@@ -397,7 +646,11 @@
         { "Thuộc Tính": "Mô Tả", "Giá Trị": catalogInfo.description || "Danh mục tiêu chuẩn kiểm toán bản quyền phần mềm doanh nghiệp" }
       ];
       const wsInfo = XLSX.utils.json_to_sheet(infoRows);
-      formatWorksheet(wsInfo, { minColWidth: 18, startDataRow: 0 });
+      formatWorksheet(wsInfo, {
+        customWidths: [22, 50],
+        startDataRow: 0,
+        freezeRow: 1
+      });
       XLSX.utils.book_append_sheet(wb, wsInfo, "Thong_Tin_Catalog");
     }
 
@@ -405,8 +658,8 @@
   }
 
   function exportAuditReport(options) {
-    const { metrics, kpiBreakdown, installations, clientName, auditDate, auditorUnit, catalogInfo, computers, executivePlanRows } = options || {};
-    exportExecutiveReport(executivePlanRows, metrics, clientName, auditDate, installations, computers, kpiBreakdown);
+    const { metrics, kpiBreakdown, installations, clientName, auditDate, auditorUnit, catalogInfo, computers, executivePlanRows, overrides } = options || {};
+    exportExecutiveReport(executivePlanRows, metrics, clientName, auditDate, installations, computers, kpiBreakdown, overrides);
   }
 
   function exportDetailedMachines(installations, clientName, auditDate) {
@@ -433,7 +686,12 @@
       "Đơn Giá Dự Toán (VNĐ)": i.estimatedPriceVND || 0
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
-    formatWorksheet(ws, { minColWidth: 15, startDataRow: 0 });
+    formatWorksheet(ws, {
+      customWidths: [7, 20, 20, 18, 30, 26, 18, 14, 20, 16, 18, 22, 40, 24, 20],
+      startDataRow: 0,
+      freezeRow: 1,
+      autoFilterRange: `A1:O${rows.length + 1}`
+    });
     XLSX.utils.book_append_sheet(wb, ws, "Chi_Tiet_May_Tinh");
 
     const cleanClient = String(clientName || "Doanh_Nghiep").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "_");

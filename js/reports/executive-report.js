@@ -2,8 +2,9 @@
 (function (global) {
   'use strict';
 
-  function MultiSelectFilter({ label, options, selected, onChange }) {
+  function MultiSelectFilter({ label, options = [], selected = [], onChange }) {
     const [open, setOpen] = React.useState(false);
+    const [search, setSearch] = React.useState("");
     const wrapRef = React.useRef(null);
 
     React.useEffect(() => {
@@ -16,20 +17,44 @@
       return () => document.removeEventListener("mousedown", handleOutsideClick);
     }, []);
 
-    const toggleOption = (opt) => {
-      if (selected.includes(opt)) {
-        onChange(selected.filter((s) => s !== opt));
+    // Normalize options: handles both strings array and objects array with { value, label }
+    const items = React.useMemo(() => {
+      return (options || []).map((opt) => {
+        if (opt && typeof opt === "object" && opt.value !== undefined) {
+          return { value: opt.value, label: opt.label || String(opt.value) };
+        }
+        return { value: opt, label: String(opt) };
+      });
+    }, [options]);
+
+    const safeSelected = Array.isArray(selected) ? selected : [];
+
+    const toggleOption = (val) => {
+      if (safeSelected.includes(val)) {
+        onChange(safeSelected.filter((s) => s !== val));
       } else {
-        onChange([...selected, opt]);
+        onChange([...safeSelected, val]);
       }
     };
 
-    const allSelected = selected.length === options.length;
+    const allSelected = items.length > 0 && safeSelected.length === items.length;
     const summaryText = allSelected
-      ? `Tất cả (${options.length})`
-      : selected.length === 0
-        ? "Không chọn mục nào"
-        : `${selected.length}/${options.length} đã chọn`;
+      ? `Tất cả (${items.length})`
+      : safeSelected.length === 0
+        ? "Không chọn"
+        : safeSelected.length === 1
+          ? (items.find((i) => i.value === safeSelected[0])?.label || safeSelected[0])
+          : `${safeSelected.length}/${items.length} đã chọn`;
+
+    const filteredItems = React.useMemo(() => {
+      if (!search.trim()) return items;
+      const q = search.toLowerCase();
+      return items.filter(
+        (it) =>
+          it.label.toLowerCase().includes(q) ||
+          String(it.value).toLowerCase().includes(q)
+      );
+    }, [items, search]);
 
     return React.createElement(
       "div",
@@ -38,12 +63,15 @@
         "button",
         {
           type: "button",
-          onClick: () => setOpen((o) => !o),
+          onClick: () => {
+            setOpen((o) => !o);
+            setSearch("");
+          },
           className:
-            "flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-slate-300 text-xs hover:bg-slate-50 transition cursor-pointer",
+            "flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-slate-300 text-xs hover:bg-slate-50 transition cursor-pointer shadow-xs",
         },
         React.createElement("span", { className: "font-semibold text-slate-600" }, label + ":"),
-        React.createElement("span", { className: "font-medium text-slate-900" }, summaryText),
+        React.createElement("span", { className: "font-medium text-slate-900 truncate max-w-[150px]", title: summaryText }, summaryText),
         React.createElement("span", { className: "text-slate-400 text-[8px]" }, "▼")
       ),
       open &&
@@ -51,22 +79,35 @@
           "div",
           {
             className:
-              "absolute z-50 mt-1 right-0 w-56 bg-white border border-slate-300 rounded-lg shadow-xl p-2 text-xs",
+              "absolute z-50 mt-1 left-0 min-w-[240px] max-w-[340px] bg-white border border-slate-300 rounded-xl shadow-2xl p-2.5 text-xs text-slate-800",
           },
+          items.length > 5 &&
+            React.createElement(
+              "div",
+              { className: "mb-1.5" },
+              React.createElement("input", {
+                type: "text",
+                placeholder: "Tìm kiếm nhanh...",
+                value: search,
+                onChange: (e) => setSearch(e.target.value),
+                className:
+                  "w-full px-2 py-1 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-slate-50",
+              })
+            ),
           React.createElement(
             "div",
             {
               className:
-                "flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-200",
+                "flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-200 text-[11px]",
             },
             React.createElement(
               "button",
               {
                 type: "button",
-                onClick: () => onChange(options),
+                onClick: () => onChange(items.map((i) => i.value)),
                 className: "text-blue-600 hover:underline font-semibold cursor-pointer",
               },
-              "Chọn tất cả"
+              `Chọn tất cả (${items.length})`
             ),
             React.createElement(
               "button",
@@ -81,23 +122,33 @@
           React.createElement(
             "div",
             { className: "max-h-56 overflow-y-auto space-y-0.5" },
-            options.map((opt) =>
-              React.createElement(
-                "label",
-                {
-                  key: opt,
-                  className:
-                    "flex items-center gap-2 px-1.5 py-1 rounded hover:bg-slate-50 cursor-pointer select-none",
-                },
-                React.createElement("input", {
-                  type: "checkbox",
-                  checked: selected.includes(opt),
-                  onChange: () => toggleOption(opt),
-                  className: "accent-blue-600 cursor-pointer",
-                }),
-                React.createElement("span", { className: "text-slate-800" }, opt)
-              )
-            )
+            filteredItems.length === 0
+              ? React.createElement(
+                  "div",
+                  { className: "p-2 text-center text-slate-400 italic text-[11px]" },
+                  "Không có kết quả"
+                )
+              : filteredItems.map((it) =>
+                  React.createElement(
+                    "label",
+                    {
+                      key: String(it.value),
+                      className:
+                        "flex items-center gap-2 px-1.5 py-1 rounded hover:bg-slate-50 cursor-pointer select-none",
+                    },
+                    React.createElement("input", {
+                      type: "checkbox",
+                      checked: safeSelected.includes(it.value),
+                      onChange: () => toggleOption(it.value),
+                      className: "accent-blue-600 cursor-pointer rounded shrink-0",
+                    }),
+                    React.createElement(
+                      "span",
+                      { className: "text-slate-800 break-words leading-tight", title: it.label },
+                      it.label
+                    )
+                  )
+                )
           )
         )
     );
@@ -155,10 +206,32 @@
     const standardTitle = `${(catalogInfo && catalogInfo.name) || 'Hachihi SAM Standard'} v${(catalogInfo && catalogInfo.version) || '2026.09'}`;
 
     // State for 6. PER_DEVICE_AUDIT (Báo cáo theo từng máy)
-    const [selectedDeviceHostname, setSelectedDeviceHostname] = React.useState("ALL");
+    const [selectedDeviceHostnames, setSelectedDeviceHostnames] = React.useState([]);
     const [perDeviceVendorFilter, setPerDeviceVendorFilter] = React.useState([]);
     const [perDeviceLicenseFilter, setPerDeviceLicenseFilter] = React.useState([]);
     const [compactHardware, setCompactHardware] = React.useState(true);
+
+    // Editable overrides states for reports
+    const [execPlanOverrides, setExecPlanOverrides] = React.useState({});
+    const [detailOverrides, setDetailOverrides] = React.useState({});
+    const [deviceSoftwareOverrides, setDeviceSoftwareOverrides] = React.useState({});
+    const [deviceInfoOverrides, setDeviceInfoOverrides] = React.useState({});
+
+    React.useEffect(() => {
+      if (computers && computers.length > 0) {
+        setSelectedDeviceHostnames((prev) => {
+          if (Array.isArray(prev) && prev.length > 0) return prev;
+          return computers.map((c) => c.hostname);
+        });
+      }
+    }, [computers]);
+
+    const safeSelectedDeviceHostnames = React.useMemo(() => {
+      if (Array.isArray(selectedDeviceHostnames) && selectedDeviceHostnames.length > 0) {
+        return selectedDeviceHostnames;
+      }
+      return (computers || []).map((c) => c.hostname);
+    }, [selectedDeviceHostnames, computers]);
 
     const allDeviceVendors = React.useMemo(() => {
       const set = new Set();
@@ -242,13 +315,13 @@
       {
         id: "print-modal-root",
         className:
-          "fixed inset-0 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 z-50 animate-fadeIn print-modal-backdrop",
+          "fixed inset-0 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-1 sm:p-2 z-50 animate-fadeIn print-modal-backdrop",
       },
       React.createElement(
         "div",
         {
           className:
-            "bg-white rounded-2xl max-w-6xl w-full max-h-[96vh] flex flex-col shadow-2xl overflow-hidden border border-slate-300 print-modal-container",
+            "bg-white rounded-xl w-[99vw] max-w-[99vw] h-[98vh] max-h-[98vh] flex flex-col shadow-2xl overflow-hidden border border-slate-300 print-modal-container",
         },
         // Modal Header Bar (hidden in print)
         React.createElement(
@@ -376,6 +449,35 @@
             React.createElement(
               "button",
               {
+                type: "button",
+                onClick: () => {
+                  if (global.SAM_EXPORTER && global.SAM_EXPORTER.exportExecutiveReport) {
+                    global.SAM_EXPORTER.exportExecutiveReport(
+                      executivePlanRows,
+                      metrics,
+                      clientName,
+                      auditDate,
+                      installations,
+                      computers,
+                      kpiBreakdown,
+                      {
+                        execPlanOverrides,
+                        detailOverrides,
+                        deviceSoftwareOverrides,
+                        deviceInfoOverrides
+                      }
+                    );
+                  }
+                },
+                className:
+                  "px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold shadow transition cursor-pointer flex items-center gap-1.5",
+                title: "Xuất file Excel đầy đủ 5 sheets chuẩn doanh nghiệp kèm biểu đồ trực quan",
+              },
+              "📊 Xuất Excel Chuẩn"
+            ),
+            React.createElement(
+              "button",
+              {
                 onClick: () => handlePrint(reportType),
                 className:
                   "px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow transition cursor-pointer flex items-center gap-1.5",
@@ -400,7 +502,7 @@
           "div",
           {
             className:
-              "bg-slate-100 px-6 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-700 print-hidden no-print print-modal-controls",
+              "bg-slate-100 px-6 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-700 print-hidden no-print print-modal-controls relative z-20",
           },
           React.createElement(
             "div",
@@ -557,6 +659,43 @@
               printUtils.getDocumentTitleForPrint ? printUtils.getDocumentTitleForPrint(reportType, clientName, auditDate) : 'Bao_Cao',
               ".pdf"
             )
+          ),
+          React.createElement(
+            "div",
+            {
+              className:
+                "w-full flex items-center justify-between gap-2 text-[11px] text-blue-900 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg",
+            },
+            React.createElement(
+              "div",
+              { className: "flex items-center gap-1.5" },
+              React.createElement("span", { className: "text-blue-600 font-bold" }, "✏️ Chỉnh sửa trực tiếp:"),
+              React.createElement(
+                "span",
+                null,
+                "Các cột ",
+                React.createElement("strong", { className: "text-blue-950 font-semibold" }, "Phân loại / Trạng thái / Khuyến nghị"),
+                " (và thông tin Người dùng / Phòng ban) đều có thể chỉnh sửa trực tiếp trên bảng xem trước này trước khi In / Xuất PDF."
+              )
+            ),
+            (Object.keys(execPlanOverrides).length > 0 ||
+              Object.keys(detailOverrides).length > 0 ||
+              Object.keys(deviceSoftwareOverrides).length > 0 ||
+              Object.keys(deviceInfoOverrides).length > 0) &&
+              React.createElement(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => {
+                    setExecPlanOverrides({});
+                    setDetailOverrides({});
+                    setDeviceSoftwareOverrides({});
+                    setDeviceInfoOverrides({});
+                  },
+                  className: "text-[10px] text-rose-600 hover:text-rose-800 underline font-medium cursor-pointer ml-auto shrink-0",
+                },
+                "↺ Khôi phục dữ liệu gốc"
+              )
           )
         ),
 
@@ -1238,25 +1377,73 @@
                             },
                             row.missingInvoiceCount
                           ),
-                          React.createElement(
-                            "td",
-                            { className: "p-2 text-center border-r border-slate-200" },
-                            React.createElement(
-                              "span",
-                              {
-                                className: `inline-block text-[10px] px-2 py-0.5 rounded border ${row.riskColor}`,
-                              },
-                              row.riskLabel
-                            )
-                          ),
-                          React.createElement(
-                            "td",
-                            {
-                              className:
-                                "p-2 border-r border-slate-200 text-slate-800 leading-snug",
-                            },
-                            row.recommendation
-                          ),
+                          (() => {
+                            const curRisk = execPlanOverrides[row.name]?.riskLabel || row.riskLabel;
+                            const curRiskColor = execPlanOverrides[row.name]?.riskColor || row.riskColor;
+                            const curRec = execPlanOverrides[row.name]?.recommendation !== undefined ? execPlanOverrides[row.name].recommendation : row.recommendation;
+
+                            return [
+                              React.createElement(
+                                "td",
+                                { key: "risk", className: "p-1.5 text-center border-r border-slate-200" },
+                                React.createElement(
+                                  "select",
+                                  {
+                                    value: curRisk,
+                                    onChange: (e) => {
+                                      const val = e.target.value;
+                                      let newCol = curRiskColor;
+                                      if (val.includes("NGHIÊM TRỌNG")) newCol = "bg-rose-100 text-rose-800 border-rose-200 font-bold";
+                                      else if (val.includes("CAO")) newCol = "bg-amber-100 text-amber-800 border-amber-200 font-bold";
+                                      else if (val.includes("CẦN KIỂM TRA")) newCol = "bg-blue-100 text-blue-800 border-blue-200 font-medium";
+                                      else newCol = "bg-emerald-100 text-emerald-800 border-emerald-200 font-medium";
+                                      setExecPlanOverrides((prev) => ({
+                                        ...prev,
+                                        [row.name]: { ...prev[row.name], riskLabel: val, riskColor: newCol },
+                                      }));
+                                    },
+                                    className:
+                                      "print:hidden text-[10px] font-bold px-1.5 py-0.5 rounded border border-slate-300 bg-white hover:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer max-w-[130px]",
+                                    title: "Nhấn để sửa Mức độ rủi ro",
+                                  },
+                                  React.createElement("option", { value: "🔴 RỦI RO NGHIÊM TRỌNG" }, "🔴 Nghiêm trọng"),
+                                  React.createElement("option", { value: "🟠 RỦI RO CAO" }, "🟠 Rủi ro Cao"),
+                                  React.createElement("option", { value: "🟡 CẦN KIỂM TRA" }, "🟡 Cần kiểm tra"),
+                                  React.createElement("option", { value: "🟢 RỦI RO THẤP / FOSS" }, "🟢 Rủi ro Thấp / FOSS"),
+                                  React.createElement("option", { value: "🟢 HỢP LỆ" }, "🟢 Hợp lệ")
+                                ),
+                                React.createElement(
+                                  "span",
+                                  {
+                                    className: `hidden print:inline-block text-[10px] px-2 py-0.5 rounded border ${curRiskColor}`,
+                                  },
+                                  curRisk
+                                )
+                              ),
+                              React.createElement(
+                                "td",
+                                {
+                                  key: "rec",
+                                  className:
+                                    "p-1.5 border-r border-slate-200 text-slate-800 leading-snug",
+                                },
+                                React.createElement("input", {
+                                  type: "text",
+                                  value: curRec,
+                                  onChange: (e) => {
+                                    const val = e.target.value;
+                                    setExecPlanOverrides((prev) => ({
+                                      ...prev,
+                                      [row.name]: { ...prev[row.name], recommendation: val },
+                                    }));
+                                  },
+                                  className:
+                                    "w-full text-xs text-slate-800 bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1.5 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
+                                  title: "Nhấn để sửa Phương án khuyến nghị",
+                                })
+                              )
+                            ];
+                          })(),
                           React.createElement(
                             "td",
                             {
@@ -1598,13 +1785,18 @@
                     "tbody",
                     { className: "divide-y divide-slate-200 bg-white text-[9.5px]" },
                     detailFilteredInstalls.map((inst, idx) => {
-                      const pmClass = utils.classifySoftware ? utils.classifySoftware(inst) : 'Thương mại';
-                      const invStatusText = utils.getInvoiceText ? utils.getInvoiceText(inst) : 'Chưa có hóa đơn';
-                      const actionText = utils.getActionRequired ? utils.getActionRequired(inst) : 'Kiểm tra';
+                      const instKey = inst.id || `${inst.computerHostname}::${inst.rawSoftwareName || inst.displayName}`;
+                      const defaultPmClass = utils.classifySoftware ? utils.classifySoftware(inst) : 'Thương mại';
+                      const defaultInvStatusText = utils.getInvoiceText ? utils.getInvoiceText(inst) : 'Chưa có hóa đơn';
+                      const defaultActionText = utils.getActionRequired ? utils.getActionRequired(inst) : 'Kiểm tra';
+
+                      const pmClass = detailOverrides[instKey]?.category !== undefined ? detailOverrides[instKey].category : defaultPmClass;
+                      const invStatusText = detailOverrides[instKey]?.invoiceStatus !== undefined ? detailOverrides[instKey].invoiceStatus : defaultInvStatusText;
+                      const actionText = detailOverrides[instKey]?.recommendation !== undefined ? detailOverrides[instKey].recommendation : defaultActionText;
 
                       return React.createElement(
                         "tr",
-                        { key: inst.id || idx, className: "hover:bg-slate-50" },
+                        { key: instKey || idx, className: "hover:bg-slate-50" },
                         React.createElement(
                           "td",
                           {
@@ -1656,12 +1848,35 @@
                           "td",
                           {
                             className:
-                              "p-1.5 text-center border-r border-slate-200 whitespace-nowrap",
+                              "p-1 text-center border-r border-slate-200 whitespace-nowrap",
                           },
+                          React.createElement(
+                            "select",
+                            {
+                              value: pmClass,
+                              onChange: (e) => {
+                                const val = e.target.value;
+                                setDetailOverrides((prev) => ({
+                                  ...prev,
+                                  [instKey]: { ...prev[instKey], category: val },
+                                }));
+                              },
+                              className:
+                                "print:hidden text-[9px] font-semibold px-1 py-0.5 rounded border border-slate-300 bg-white hover:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer max-w-[110px]",
+                              title: "Nhấn để sửa Phân loại",
+                            },
+                            React.createElement("option", { value: "Thương mại" }, "Thương mại"),
+                            React.createElement("option", { value: "Miễn phí (Freeware)" }, "Miễn phí (Freeware)"),
+                            React.createElement("option", { value: "Tool Crack" }, "Tool Crack"),
+                            React.createElement("option", { value: "Phần mềm rác" }, "Phần mềm rác"),
+                            React.createElement("option", { value: "Freemium" }, "Freemium"),
+                            React.createElement("option", { value: "Mã nguồn mở (FOSS)" }, "Mã nguồn mở (FOSS)"),
+                            React.createElement("option", { value: "Hệ điều hành" }, "Hệ điều hành")
+                          ),
                           React.createElement(
                             "span",
                             {
-                              className: `inline-block px-1.5 py-0.5 rounded text-[8.5px] font-semibold ${
+                              className: `hidden print:inline-block px-1.5 py-0.5 rounded text-[8.5px] font-semibold ${
                                 pmClass === "Tool Crack"
                                   ? "bg-rose-100 text-rose-800 font-bold"
                                   : pmClass === "Phần mềm rác"
@@ -1680,12 +1895,33 @@
                           "td",
                           {
                             className:
-                              "p-1.5 text-center border-r border-slate-200 whitespace-nowrap",
+                              "p-1 text-center border-r border-slate-200 whitespace-nowrap",
                           },
+                          React.createElement(
+                            "select",
+                            {
+                              value: invStatusText,
+                              onChange: (e) => {
+                                const val = e.target.value;
+                                setDetailOverrides((prev) => ({
+                                  ...prev,
+                                  [instKey]: { ...prev[instKey], invoiceStatus: val },
+                                }));
+                              },
+                              className:
+                                "print:hidden text-[9px] font-medium px-1 py-0.5 rounded border border-slate-300 bg-white hover:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer max-w-[115px]",
+                              title: "Nhấn để sửa Trạng thái hóa đơn",
+                            },
+                            React.createElement("option", { value: "Đã có Hóa đơn VAT" }, "Đã có HĐ VAT"),
+                            React.createElement("option", { value: "Chưa có hóa đơn" }, "Chưa có hóa đơn"),
+                            React.createElement("option", { value: "Bẫy bản quyền cá nhân" }, "Bẫy bản quyền"),
+                            React.createElement("option", { value: "Không áp dụng / FOSS" }, "Không áp dụng / FOSS"),
+                            React.createElement("option", { value: "Cần kiểm tra" }, "Cần kiểm tra")
+                          ),
                           React.createElement(
                             "span",
                             {
-                              className: `inline-block px-1.5 py-0.5 rounded text-[8.5px] font-medium ${
+                              className: `hidden print:inline-block px-1.5 py-0.5 rounded text-[8.5px] font-medium ${
                                 invStatusText === "Đã có Hóa đơn VAT"
                                   ? "text-emerald-700 font-bold"
                                   : invStatusText === "Chưa có hóa đơn"
@@ -1698,24 +1934,30 @@
                         ),
                         React.createElement(
                           "td",
-                          { className: "p-1.5 text-slate-800 leading-snug" },
-                          React.createElement(
-                            "span",
-                            {
-                              className: `${
-                                actionText.includes("GỠ BỎ GẤP")
-                                  ? "text-rose-700 font-bold"
-                                  : actionText.includes("Mua")
-                                  ? "text-blue-700 font-bold"
-                                  : actionText.includes("Thay bằng")
-                                  ? "text-indigo-700 font-semibold"
-                                  : actionText.includes("Hợp lệ")
-                                  ? "text-emerald-700 font-medium"
-                                  : "text-slate-700"
-                              }`,
+                          { className: "p-1 text-slate-800 leading-snug" },
+                          React.createElement("input", {
+                            type: "text",
+                            value: actionText,
+                            onChange: (e) => {
+                              const val = e.target.value;
+                              setDetailOverrides((prev) => ({
+                                ...prev,
+                                [instKey]: { ...prev[instKey], recommendation: val },
+                              }));
                             },
-                            actionText
-                          )
+                            className: `w-full text-[9.5px] bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent ${
+                              actionText.includes("GỠ BỎ GẤP")
+                                ? "text-rose-700 font-bold"
+                                : actionText.includes("Mua")
+                                ? "text-blue-700 font-bold"
+                                : actionText.includes("Thay bằng")
+                                ? "text-indigo-700 font-semibold"
+                                : actionText.includes("Hợp lệ")
+                                ? "text-emerald-700 font-medium"
+                                : "text-slate-700"
+                            }`,
+                            title: "Nhấn để sửa Khuyến nghị xử lý",
+                          })
                         )
                       );
                     })
@@ -2314,30 +2556,40 @@
                     "span",
                     null,
                     "Thiết bị hiển thị: ",
-                    React.createElement(
-                      "strong",
-                      { className: "text-blue-900 font-bold" },
-                      selectedDeviceHostnames.length === computers.length
-                        ? `Tất cả (${computers.length} máy)`
-                        : `${selectedDeviceHostnames.length}/${computers.length} máy đã chọn`
-                    )
+                    (() => {
+                      const safeSelectedList = Array.isArray(selectedDeviceHostnames)
+                        ? selectedDeviceHostnames
+                        : (selectedDeviceHostnames ? [selectedDeviceHostnames] : []);
+                      const totalComps = (computers || []).length;
+                      return React.createElement(
+                        "strong",
+                        { className: "text-blue-900 font-bold" },
+                        safeSelectedList.length === totalComps
+                          ? `Tất cả (${totalComps} máy)`
+                          : `${safeSelectedList.length}/${totalComps} máy đã chọn`
+                      );
+                    })()
                   )
                 )
               ),
 
               // Devices List
-              React.createElement(
-                "div",
-                { className: "space-y-6 print:space-y-0" },
-                selectedDeviceHostnames.length === 0
-                  ? React.createElement(
-                      "div",
-                      { className: "p-8 text-center text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-300" },
-                      "Chưa chọn máy tính nào để in. Vui lòng chọn ít nhất một máy trong bộ lọc phía trên."
-                    )
-                  : computers
-                      .filter((c) => selectedDeviceHostnames.includes(c.hostname))
-                      .map((comp, compIdx, arr) => {
+              (() => {
+                const safeSelectedList = Array.isArray(selectedDeviceHostnames)
+                  ? selectedDeviceHostnames
+                  : (selectedDeviceHostnames ? [selectedDeviceHostnames] : []);
+                const filteredComps = (computers || []).filter((c) => safeSelectedList.includes(c.hostname));
+
+                return React.createElement(
+                  "div",
+                  { className: "space-y-6 print:space-y-0" },
+                  safeSelectedList.length === 0
+                    ? React.createElement(
+                        "div",
+                        { className: "p-8 text-center text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-300" },
+                        "Chưa chọn máy tính nào để in. Vui lòng chọn ít nhất một máy trong bộ lọc phía trên."
+                      )
+                    : filteredComps.map((comp, compIdx, arr) => {
                   const details = parseDeviceDetails(comp, compIdx);
 
                   // Device installs
@@ -2550,31 +2802,46 @@
                               },
                               "Họ và tên người dùng"
                             ),
-                            React.createElement(
-                              "td",
-                              {
-                                className:
-                                  "p-2 text-slate-900 border-r border-slate-200 font-medium",
-                              },
-                              comp.user
-                                ? comp.user
-                                : React.createElement(
-                                    "span",
-                                    { className: "text-slate-600 font-normal" },
-                                    "[Chưa có dữ liệu]"
-                                  )
-                            ),
-                            React.createElement(
-                              "td",
-                              {
-                                className: comp.user
-                                  ? "p-2 text-emerald-700 font-medium"
-                                  : "p-2 text-slate-600",
-                              },
-                              comp.user
-                                ? "Đã phân bổ nhân sự tiếp nhận"
-                                : "Cần bổ sung nhân sự tiếp nhận"
-                            )
+                            (() => {
+                              const curUser = deviceInfoOverrides[comp.hostname]?.user !== undefined ? deviceInfoOverrides[comp.hostname].user : comp.user;
+                              return [
+                                React.createElement(
+                                  "td",
+                                  {
+                                    key: "user-val",
+                                    className:
+                                      "p-1 text-slate-900 border-r border-slate-200 font-medium",
+                                  },
+                                  React.createElement("input", {
+                                    type: "text",
+                                    value: curUser || "",
+                                    placeholder: "[Chưa có dữ liệu người dùng]",
+                                    onChange: (e) => {
+                                      const val = e.target.value;
+                                      setDeviceInfoOverrides((prev) => ({
+                                        ...prev,
+                                        [comp.hostname]: { ...prev[comp.hostname], user: val },
+                                      }));
+                                    },
+                                    className:
+                                      "w-full text-xs text-slate-900 bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1.5 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
+                                    title: "Nhấn để sửa Họ và tên người dùng",
+                                  })
+                                ),
+                                React.createElement(
+                                  "td",
+                                  {
+                                    key: "user-status",
+                                    className: curUser
+                                      ? "p-2 text-emerald-700 font-medium"
+                                      : "p-2 text-slate-600",
+                                  },
+                                  curUser
+                                    ? "Đã phân bổ nhân sự tiếp nhận"
+                                    : "Cần bổ sung nhân sự tiếp nhận"
+                                )
+                              ];
+                            })()
                           ),
                           React.createElement(
                             "tr",
@@ -2587,31 +2854,46 @@
                               },
                               "Vị trí / Phòng ban"
                             ),
-                            React.createElement(
-                              "td",
-                              {
-                                className:
-                                  "p-2 text-slate-900 border-r border-slate-200 font-medium",
-                              },
-                              comp.department
-                                ? comp.department
-                                : React.createElement(
-                                    "span",
-                                    { className: "text-slate-600 font-normal" },
-                                    "[Chưa có dữ liệu]"
-                                  )
-                            ),
-                            React.createElement(
-                              "td",
-                              {
-                                className: comp.department
-                                  ? "p-2 text-emerald-700 font-medium"
-                                  : "p-2 text-slate-600",
-                              },
-                              comp.department
-                                ? "Đã ghi nhận phòng ban quản lý"
-                                : "Cần bổ sung thông tin quản lý"
-                            )
+                            (() => {
+                              const curDept = deviceInfoOverrides[comp.hostname]?.department !== undefined ? deviceInfoOverrides[comp.hostname].department : comp.department;
+                              return [
+                                React.createElement(
+                                  "td",
+                                  {
+                                    key: "dept-val",
+                                    className:
+                                      "p-1 text-slate-900 border-r border-slate-200 font-medium",
+                                  },
+                                  React.createElement("input", {
+                                    type: "text",
+                                    value: curDept || "",
+                                    placeholder: "[Chưa có dữ liệu phòng ban]",
+                                    onChange: (e) => {
+                                      const val = e.target.value;
+                                      setDeviceInfoOverrides((prev) => ({
+                                        ...prev,
+                                        [comp.hostname]: { ...prev[comp.hostname], department: val },
+                                      }));
+                                    },
+                                    className:
+                                      "w-full text-xs text-slate-900 bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1.5 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
+                                    title: "Nhấn để sửa Vị trí / Phòng ban",
+                                  })
+                                ),
+                                React.createElement(
+                                  "td",
+                                  {
+                                    key: "dept-status",
+                                    className: curDept
+                                      ? "p-2 text-emerald-700 font-medium"
+                                      : "p-2 text-slate-600",
+                                  },
+                                  curDept
+                                    ? "Đã ghi nhận phòng ban quản lý"
+                                    : "Cần bổ sung thông tin quản lý"
+                                )
+                              ];
+                            })()
                           ),
 
                           // 2. CẤU HÌNH PHẦN CỨNG
@@ -2889,37 +3171,89 @@
                                                 `(${item.version})`
                                               )
                                           ),
-                                          React.createElement(
-                                            "td",
-                                            {
-                                              className:
-                                                "p-2 border-r border-slate-200 text-slate-700",
-                                            },
-                                            item.category
-                                          ),
-                                          React.createElement(
-                                            "td",
-                                            {
-                                              className:
-                                                "p-2 border-r border-slate-200 text-slate-800 font-medium",
-                                            },
-                                            item.vendor
-                                          ),
-                                          React.createElement(
-                                            "td",
-                                            {
-                                              className:
-                                                "p-2 border-r border-slate-200 text-slate-800",
-                                            },
-                                            item.licenseTypeLabel
-                                          ),
-                                          React.createElement(
-                                            "td",
-                                            {
-                                              className: `p-2 ${item.evaluationClass}`,
-                                            },
-                                            item.evaluation
-                                          )
+                                          (() => {
+                                            const itemKey = `${comp.hostname}::${item.isOS ? '__OS__' : item.name}`;
+                                            const curCategory = deviceSoftwareOverrides[itemKey]?.category !== undefined ? deviceSoftwareOverrides[itemKey].category : item.category;
+                                            const curLicense = deviceSoftwareOverrides[itemKey]?.licenseTypeLabel !== undefined ? deviceSoftwareOverrides[itemKey].licenseTypeLabel : item.licenseTypeLabel;
+                                            const curEvaluation = deviceSoftwareOverrides[itemKey]?.evaluation !== undefined ? deviceSoftwareOverrides[itemKey].evaluation : item.evaluation;
+
+                                            return [
+                                              React.createElement(
+                                                "td",
+                                                {
+                                                  key: "cat",
+                                                  className:
+                                                    "p-1 border-r border-slate-200 text-slate-700",
+                                                },
+                                                React.createElement("input", {
+                                                  type: "text",
+                                                  value: curCategory,
+                                                  onChange: (e) => {
+                                                    const val = e.target.value;
+                                                    setDeviceSoftwareOverrides((prev) => ({
+                                                      ...prev,
+                                                      [itemKey]: { ...prev[itemKey], category: val },
+                                                    }));
+                                                  },
+                                                  className:
+                                                    "w-full text-xs text-slate-700 bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
+                                                  title: "Nhấn để sửa Phân loại",
+                                                })
+                                              ),
+                                              React.createElement(
+                                                "td",
+                                                {
+                                                  key: "vendor",
+                                                  className:
+                                                    "p-2 border-r border-slate-200 text-slate-800 font-medium",
+                                                },
+                                                item.vendor
+                                              ),
+                                              React.createElement(
+                                                "td",
+                                                {
+                                                  key: "lic",
+                                                  className:
+                                                    "p-1 border-r border-slate-200 text-slate-800",
+                                                },
+                                                React.createElement("input", {
+                                                  type: "text",
+                                                  value: curLicense,
+                                                  onChange: (e) => {
+                                                    const val = e.target.value;
+                                                    setDeviceSoftwareOverrides((prev) => ({
+                                                      ...prev,
+                                                      [itemKey]: { ...prev[itemKey], licenseTypeLabel: val },
+                                                    }));
+                                                  },
+                                                  className:
+                                                    "w-full text-xs text-slate-800 bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
+                                                  title: "Nhấn để sửa Loại bản quyền",
+                                                })
+                                              ),
+                                              React.createElement(
+                                                "td",
+                                                {
+                                                  key: "eval",
+                                                  className: `p-1 ${item.evaluationClass}`,
+                                                },
+                                                React.createElement("input", {
+                                                  type: "text",
+                                                  value: curEvaluation,
+                                                  onChange: (e) => {
+                                                    const val = e.target.value;
+                                                    setDeviceSoftwareOverrides((prev) => ({
+                                                      ...prev,
+                                                      [itemKey]: { ...prev[itemKey], evaluation: val },
+                                                    }));
+                                                  },
+                                                  className:
+                                                    "w-full text-xs font-semibold bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
+                                                  title: "Nhấn để sửa Đánh giá sơ bộ / Khuyến nghị",
+                                                })
+                                              )
+                                            ];
+                                          })()
                                         )
                                       )
                                 )
@@ -3027,8 +3361,9 @@
                       })
                   );
                 })
-              )
-            )
+              );
+            })()
+          )
         )
       )
     );
