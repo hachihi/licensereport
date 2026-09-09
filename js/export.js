@@ -131,30 +131,31 @@
     // -------------------------------------------------------------------------
     const ws2Data = [
       ["HACHIHI SAM - DANH SÁCH PHẦN MỀM CÀI ĐẶT & ĐỐI SOÁT HÓA ĐƠN (MẪU CHUẨN)"],
-      ["Hướng dẫn: Nhập chi tiết phần mềm cài trên từng máy (Hostname) và đối soát hóa đơn VAT GTGT bản quyền. Tình trạng ghi: Có / Chưa / FOSS."],
+      ["Hướng dẫn: 2 cột đầu là Số Serial và Model máy tính. Nhập chi tiết phần mềm cài trên từng máy (Hostname) và đối soát hóa đơn VAT GTGT bản quyền."],
       [],
-      ["STT", "Tên Máy Tính (Hostname)", "Tên Phần Mềm Cài Đặt", "Hãng Sản Xuất", "Phiên Bản", "Tình Trạng Hóa Đơn (Có / Chưa / FOSS)", "Số Hóa Đơn VAT / Hợp Đồng", "Ghi Chú Kiểm Toán"],
-      [1, "KT-DESKTOP-01", "Microsoft Office Home & Business 2021", "Microsoft", "16.0", "Có", "HĐ GTGT #0023412", "Đã có HĐ VAT đầy đủ hợp lệ"],
-      [2, "KT-DESKTOP-01", "7-Zip", "Igor Pavlov", "23.01", "FOSS", "Miễn phí FOSS 100%", "Mã nguồn mở miễn phí cho doanh nghiệp (0đ)"],
-      [3, "KT-DESKTOP-01", "WinRAR 6.24", "win.rar GmbH", "6.24", "Chưa", "Chưa có hóa đơn", "Bẫy dùng thử 40 ngày, cần thay bằng 7-Zip"],
-      [4, "KD-LAPTOP-02", "TeamViewer 15", "TeamViewer", "15.48", "Chưa", "Chưa có hóa đơn", "Bẫy Free cá nhân, vi phạm điều khoản công ty"],
-      [5, "ENG-WORKSTATION-01", "AutoCAD 2024", "Autodesk", "24.3", "Chưa", "Chưa có hóa đơn", "Rủi ro kiểm tra bản quyền cao, cần mua bổ sung"],
-      [6, "ENG-WORKSTATION-01", "Phần mềm nội bộ công ty", "Nội bộ", "1.0", "FOSS", "Nội bộ tự phát triển", "An toàn, miễn phí cho doanh nghiệp"],
-      [7, "HR-PC-01", "Unikey 4.3 RC5", "Phạm Kim Long", "4.3", "FOSS", "Miễn phí 100%", "Bộ gõ tiếng Việt chuẩn FOSS"],
-      [8, "MKT-LAPTOP-01", "Adobe Photoshop 2024", "Adobe Systems", "25.2", "Có", "HĐ Adobe VIP #891230", "Đã mua thuê bao hàng năm bản quyền hợp lệ"],
+      ["Số Serial Máy Tính", "Model / Cấu Hình Máy Tính", "STT", "Tên Máy Tính (Hostname)", "Tên Phần Mềm Cài Đặt", "Hãng Sản Xuất", "Phiên Bản", "Tình Trạng Hóa Đơn (Có / Chưa / FOSS)", "Số Hóa Đơn VAT / Hợp Đồng", "Ghi Chú Kiểm Toán"],
+      ["DL7090-KT01", "Dell OptiPlex 7090", 1, "KT-DESKTOP-01", "Microsoft Office Home & Business 2021", "Microsoft", "16.0", "Có", "HĐ GTGT #0023412", "Đã có HĐ VAT đầy đủ hợp lệ"],
+      ["DL7090-KT01", "Dell OptiPlex 7090", 2, "KT-DESKTOP-01", "7-Zip", "Igor Pavlov", "23.01", "FOSS", "Miễn phí FOSS 100%", "Mã nguồn mở miễn phí cho doanh nghiệp (0đ)"],
+      ["DL7090-KT01", "Dell OptiPlex 7090", 3, "KT-DESKTOP-01", "WinRAR 6.24", "win.rar GmbH", "6.24", "Chưa", "Chưa có hóa đơn", "Bẫy dùng thử 40 ngày, cần thay bằng 7-Zip"],
+      ["LNV-T14-KD02", "Lenovo ThinkPad T14", 4, "KD-LAPTOP-02", "TeamViewer 15", "TeamViewer", "15.48", "Chưa", "Chưa có hóa đơn", "Bẫy Free cá nhân, vi phạm điều khoản công ty"],
+      ["DL3660-ENG01", "Dell Precision 3660", 5, "ENG-WORKSTATION-01", "AutoCAD 2024", "Autodesk", "24.3", "Chưa", "Chưa có hóa đơn", "Rủi ro kiểm tra bản quyền cao, cần mua bổ sung"],
+      ["DL3660-ENG01", "Dell Precision 3660", 6, "ENG-WORKSTATION-01", "Phần mềm nội bộ công ty", "Nội bộ", "1.0", "FOSS", "Nội bộ tự phát triển", "An toàn, miễn phí cho doanh nghiệp"],
+      ["HP400G7-HR01", "HP ProDesk 400 G7", 7, "HR-PC-01", "Unikey 4.3 RC5", "Phạm Kim Long", "4.3", "FOSS", "Miễn phí 100%", "Bộ gõ tiếng Việt chuẩn FOSS"],
+      ["MBP-M2-MKT01", "MacBook Pro M2", 8, "MKT-LAPTOP-01", "Adobe Photoshop 2024", "Adobe Systems", "25.2", "Có", "HĐ Adobe VIP #891230", "Đã mua thuê bao hàng năm bản quyền hợp lệ"],
     ];
 
     const ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
     ws2['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } },
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 9 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 9 } },
     ];
     ws2['!rows'] = [{ hpt: 26 }, { hpt: 20 }, { hpt: 10 }, { hpt: 24 }];
     formatWorksheet(ws2, {
-      customWidths: [8, 22, 36, 20, 14, 22, 25, 36],
+      customWidths: [22, 28, 8, 22, 36, 20, 14, 22, 25, 36],
       startDataRow: 3,
       freezeRow: 4,
-      autoFilterRange: "A4:H12"
+      freezeCol: 2,
+      autoFilterRange: "A4:J12"
     });
     XLSX.utils.book_append_sheet(wb, ws2, "2_Danh_Sach_Phan_Mem");
 
@@ -218,6 +219,223 @@
     XLSX.utils.book_append_sheet(wb, ws3, "3_Danh_Muc_Catalog");
 
     XLSX.writeFile(wb, "Mau_Kiem_Toan_Ban_Quyen_Hachihi_SAM_Chuan.xlsx");
+  }
+
+  // =========================================================================
+  // 1B. GỘP NHIỀU TẬP TIN KIỂM KÊ LÀM 1 VÀ XUẤT FILE EXCEL HỢP NHẤT
+  // =========================================================================
+  /**
+   * Exports merged inventory into 1 single Excel file:
+   * - Keeps titles & headers
+   * - Sheet 1: Merged computers list (1_Danh_Sach_May_Tinh)
+   * - Sheet 2: Merged software list (2_Danh_Sach_Phan_Mem) with FIRST 2 COLUMNS = Serial & Model
+   * - Sheet 3: Standard catalog rules (3_Danh_Muc_Catalog)
+   */
+  function exportMergedInventoryWorkbook(computers, installations, catalogRules, clientName, loadedFiles) {
+    if (typeof XLSX === 'undefined') {
+      alert('Thư viện XLSX chưa sẵn sàng!');
+      return;
+    }
+
+    const safeClient = clientName || "Hachihi.vn";
+    const wb = XLSX.utils.book_new();
+
+    // Map computers for fast lookup of serial & model
+    const compMap = new Map();
+    (computers || []).forEach((c) => {
+      if (c && c.hostname) {
+        compMap.set(String(c.hostname).trim().toUpperCase(), c);
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // SHEET 1: 1_Danh_Sach_May_Tinh (Gộp danh sách máy tính)
+    // -------------------------------------------------------------------------
+    const fileSourceCount = loadedFiles && loadedFiles.length > 0 ? loadedFiles.length : 1;
+    const ws1Data = [
+      [`HACHIHI SAM - BẢNG HỢP NHẤT TOÀN BỘ MÁY TÍNH KIỂM KÊ (${safeClient.toUpperCase()})`],
+      [`Đã gộp tự động từ ${fileSourceCount} tập tin kiểm kê • Tổng cộng ${computers ? computers.length : 0} máy tính • Ngày xuất: ${new Date().toLocaleDateString("vi-VN")}`],
+      [],
+      [
+        "STT",
+        "Tên Máy Tính (Hostname)",
+        "Người Sử Dụng",
+        "Phòng Ban",
+        "Hệ Điều Hành",
+        "Model / Cấu Hình Phần Cứng",
+        "Số Serial / Service Tag",
+        "Hãng Sản Xuất",
+        "Vi Xử Lý (CPU)",
+        "Bộ Nhớ RAM",
+        "Ổ Cứng Lưu Trữ",
+        "Tập Tin Nguồn"
+      ]
+    ];
+
+    (computers || []).forEach((c, idx) => {
+      ws1Data.push([
+        idx + 1,
+        c.hostname || "",
+        c.user || "",
+        c.department || "",
+        c.os || "",
+        c.model || "",
+        c.serial || "",
+        c.manufacturer || "",
+        c.cpu || "",
+        c.ram || "",
+        c.disk || "",
+        c.sourceFile || ""
+      ]);
+    });
+
+    const ws1 = XLSX.utils.aoa_to_sheet(ws1Data);
+    ws1['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } },
+    ];
+    ws1['!rows'] = [{ hpt: 26 }, { hpt: 20 }, { hpt: 10 }, { hpt: 24 }];
+    formatWorksheet(ws1, {
+      customWidths: [8, 22, 22, 20, 26, 28, 24, 18, 28, 22, 22, 28],
+      startDataRow: 3,
+      freezeRow: 4,
+      autoFilterRange: `A4:L${ws1Data.length}`
+    });
+    XLSX.utils.book_append_sheet(wb, ws1, "1_Danh_Sach_May_Tinh");
+
+    // -------------------------------------------------------------------------
+    // SHEET 2: 2_Danh_Sach_Phan_Mem (Gộp danh sách phần mềm, 2 cột đầu là SERIAL & MODEL)
+    // -------------------------------------------------------------------------
+    const ws2Data = [
+      [`HACHIHI SAM - BẢNG HỢP NHẤT PHẦN MỀM CÀI ĐẶT & ĐỐI SOÁT HÓA ĐƠN (${safeClient.toUpperCase()})`],
+      [`2 CỘT ĐẦU TIÊN LÀ SỐ SERIAL VÀ MODEL MÁY TÍNH • Tổng cộng ${installations ? installations.length : 0} lượt cài đặt • Đã đồng bộ từ các file nạp`],
+      [],
+      [
+        "Số Serial Máy Tính",
+        "Model / Cấu Hình Máy Tính",
+        "STT",
+        "Tên Máy Tính (Hostname)",
+        "Người Sử Dụng",
+        "Phòng Ban",
+        "Tên Phần Mềm Cài Đặt",
+        "Hãng Sản Xuất",
+        "Phiên Bản",
+        "Tình Trạng Hóa Đơn (Có / Chưa / FOSS)",
+        "Số Hóa Đơn VAT / Hợp Đồng",
+        "Ghi Chú Kiểm Toán",
+        "Tập Tin Nguồn"
+      ]
+    ];
+
+    (installations || []).forEach((inst, idx) => {
+      const hostKey = String(inst.computerHostname || "").trim().toUpperCase();
+      const comp = compMap.get(hostKey);
+
+      const serialVal = inst.computerSerial || (comp && comp.serial && comp.serial !== 'N/A' ? comp.serial : "") || "N/A";
+      const modelVal = inst.computerModel || (comp && comp.model && comp.model !== 'N/A' ? comp.model : "") || "N/A";
+      const userVal = inst.userName || (comp && comp.user) || "";
+      const deptVal = inst.department || (comp && comp.department) || "";
+      const invoiceVal = inst.invoiceStatus === "HAS_INVOICE"
+        ? "Có"
+        : (inst.licenseType === "FREE_OPEN_SOURCE" || inst.licenseType === "FOSS")
+          ? "FOSS"
+          : "Chưa";
+
+      ws2Data.push([
+        serialVal,
+        modelVal,
+        idx + 1,
+        inst.computerHostname || "",
+        userVal,
+        deptVal,
+        inst.rawSoftwareName || inst.displayName || "",
+        inst.vendor || "",
+        inst.version || "",
+        invoiceVal,
+        inst.invoiceNumber || "",
+        inst.actionDetails || inst.recommendedAlternative || "",
+        inst.sourceFile || ""
+      ]);
+    });
+
+    const ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
+    ws2['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 12 } },
+    ];
+    ws2['!rows'] = [{ hpt: 26 }, { hpt: 20 }, { hpt: 10 }, { hpt: 24 }];
+    formatWorksheet(ws2, {
+      customWidths: [24, 28, 8, 22, 20, 18, 36, 20, 14, 22, 25, 36, 28],
+      startDataRow: 3,
+      freezeRow: 4,
+      freezeCol: 2, // Khóa cố định 2 cột đầu (Serial & Model)
+      autoFilterRange: `A4:M${ws2Data.length}`
+    });
+    XLSX.utils.book_append_sheet(wb, ws2, "2_Danh_Sach_Phan_Mem");
+
+    // -------------------------------------------------------------------------
+    // SHEET 3: 3_Danh_Muc_Catalog (Từ điển nhận diện để tái nạp tương thích 100%)
+    // -------------------------------------------------------------------------
+    const catList = catalogRules || (global.SAM_CONSTANTS && global.SAM_CONSTANTS.DEFAULT_SOFTWARE_RULES) || [];
+    const ws3Data = [
+      ["HACHIHI SAM - DANH MỤC NHẬN DIỆN PHẦN MỀM & BẪY BẢN QUYỀN TIÊU CHUẨN (2026.09)"],
+      ["Danh mục từ điển quy tắc chuẩn giúp hệ thống nhận diện loại bản quyền, mức rủi ro kiểm tra và tự động tính toán đơn giá dự toán."],
+      [],
+      [
+        "STT",
+        "Tên Phần Mềm",
+        "Từ Khóa Nhận Diện",
+        "Hãng Sản Xuất",
+        "Nhóm Phân Loại",
+        "Loại Bản Quyền",
+        "Mức Rủi Ro",
+        "Đơn Giá Dự Toán (VNĐ)",
+        "Phần Mềm FOSS Thay Thế (0đ)",
+        "Ghi Chú & Hướng Dẫn Pháp Lý"
+      ]
+    ];
+
+    catList.forEach((c, idx) => {
+      const kw = Array.isArray(c.keywords) ? c.keywords.join(", ") : (c.pattern || c.keywords || "");
+      ws3Data.push([
+        idx + 1,
+        c.name || "",
+        kw,
+        c.vendor || "",
+        c.category || "Ứng dụng chung",
+        c.licenseType === "FREE_OPEN_SOURCE"
+          ? "Free / FOSS (Miễn phí cho DN)"
+          : c.licenseType === "FREE_PERSONAL_ONLY"
+            ? "Bẫy Bản Quyền Cá Nhân"
+            : "Thương Mại Trả Phí",
+        c.auditRisk === "LOW"
+          ? "An Toàn (Thấp)"
+          : c.auditRisk === "CRITICAL"
+            ? "Nghiêm Trọng"
+            : "Rủi Ro Cao",
+        c.licenseType === "FREE_OPEN_SOURCE" ? 0 : (c.estimatedPriceVND || 0),
+        c.recommendedAlternative || c.foss || "Chuẩn FOSS",
+        c.actionDetails || ""
+      ]);
+    });
+
+    const ws3 = XLSX.utils.aoa_to_sheet(ws3Data);
+    ws3['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 9 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 9 } },
+    ];
+    ws3['!rows'] = [{ hpt: 26 }, { hpt: 20 }, { hpt: 10 }, { hpt: 24 }];
+    formatWorksheet(ws3, {
+      customWidths: [8, 32, 32, 20, 18, 26, 18, 22, 26, 42],
+      startDataRow: 3,
+      freezeRow: 4,
+      autoFilterRange: `A4:J${ws3Data.length}`
+    });
+    XLSX.utils.book_append_sheet(wb, ws3, "3_Danh_Muc_Catalog");
+
+    const safeDate = new Date().toISOString().slice(0, 10);
+    const fileName = `Hachihi_SAM_Hop_Nhat_${safeClient.replace(/[^a-zA-Z0-9_-]/g, '_')}_${safeDate}.xlsx`;
+    XLSX.writeFile(wb, fileName);
   }
 
   // =========================================================================
@@ -743,6 +961,7 @@
 
   const exportModule = {
     downloadTemplate3Sheets,
+    exportMergedInventoryWorkbook,
     downloadCatalogOnly,
     exportAuditReport,
     exportExecutiveReport,
