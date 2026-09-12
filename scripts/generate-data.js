@@ -529,94 +529,148 @@ XLSX.utils.book_append_sheet(catalogWb, catInfoWs, "Catalog_Info");
 // Sample Data Workbook
 const sampleComputers = [
   {
+    "STT": 1,
     "Tên Máy Tính (Hostname)": "KT-DESKTOP-01",
     "Người Sử Dụng": "Nguyễn Thị Hoa",
     "Phòng Ban": "Kế Toán",
-    "Số Serial": "DL7090-KT01",
     "Hệ Điều Hành": "Windows 11 Pro 64-bit",
-    "Cấu Hình / Model": "Dell OptiPlex 7090 - Core i5, 16GB"
+    "Model / Cấu Hình Phần Cứng": "Dell OptiPlex 7090",
+    "Số Serial / Service Tag": "DL7090-KT01",
+    "Hãng Sản Xuất": "Dell Inc.",
+    "Vi Xử Lý (CPU)": "Intel Core i5-11500 @ 2.70GHz",
+    "Bộ Nhớ RAM": "16GB DDR4",
+    "Ổ Cứng Lưu Trữ": "512GB NVMe SSD",
+    "VGA (Card màn hình)": "Intel UHD Graphics 750"
   },
   {
+    "STT": 2,
     "Tên Máy Tính (Hostname)": "KD-LAPTOP-02",
     "Người Sử Dụng": "Trần Văn Nam",
     "Phòng Ban": "Kinh Doanh",
-    "Số Serial": "LNV-T14-KD02",
     "Hệ Điều Hành": "Windows 10 Pro 64-bit",
-    "Cấu Hình / Model": "Lenovo ThinkPad T14 - Core i7, 16GB"
+    "Model / Cấu Hình Phần Cứng": "Lenovo ThinkPad T14 Gen 2",
+    "Số Serial / Service Tag": "LNV-T14-KD02",
+    "Hãng Sản Xuất": "Lenovo",
+    "Vi Xử Lý (CPU)": "Intel Core i7-1165G7 @ 2.80GHz",
+    "Bộ Nhớ RAM": "16GB DDR4",
+    "Ổ Cứng Lưu Trữ": "512GB NVMe SSD",
+    "VGA (Card màn hình)": "Intel Iris Xe Graphics"
   },
   {
+    "STT": 3,
     "Tên Máy Tính (Hostname)": "ENG-WORKSTATION-01",
     "Người Sử Dụng": "Lê Minh Tuấn",
     "Phòng Ban": "Kỹ Thuật",
-    "Số Serial": "DL3660-ENG01",
-    "Hệ Điều Hành": "Windows 11 Pro",
-    "Cấu Hình / Model": "Dell Precision 3660 - Core i9, RTX"
+    "Hệ Điều Hành": "Windows 11 Pro 64-bit",
+    "Model / Cấu Hình Phần Cứng": "Dell Precision 3660",
+    "Số Serial / Service Tag": "DL3660-ENG01",
+    "Hãng Sản Xuất": "Dell Inc.",
+    "Vi Xử Lý (CPU)": "Intel Core i9-12900K @ 3.20GHz",
+    "Bộ Nhớ RAM": "32GB DDR5",
+    "Ổ Cứng Lưu Trữ": "1TB NVMe SSD + 2TB HDD",
+    "VGA (Card màn hình)": "NVIDIA GeForce RTX 4080 16GB"
   },
   {
+    "STT": 4,
     "Tên Máy Tính (Hostname)": "HR-PC-01",
     "Người Sử Dụng": "Phạm Thu Trang",
     "Phòng Ban": "Hành Chính Nhân Sự",
-    "Số Serial": "HP400G7-HR01",
     "Hệ Điều Hành": "Windows 11 Home",
-    "Cấu Hình / Model": "HP ProDesk 400 G7 - Core i3, 8GB"
+    "Model / Cấu Hình Phần Cứng": "HP ProDesk 400 G7",
+    "Số Serial / Service Tag": "HP400G7-HR01",
+    "Hãng Sản Xuất": "HP Inc.",
+    "Vi Xử Lý (CPU)": "Intel Core i3-10100 @ 3.60GHz",
+    "Bộ Nhớ RAM": "8GB DDR4",
+    "Ổ Cứng Lưu Trữ": "256GB NVMe SSD",
+    "VGA (Card màn hình)": "Intel UHD Graphics 630"
   }
 ];
 
 const sampleInstalls = [
   {
-    "Tên Máy Tính (Hostname)": "KT-DESKTOP-01",
-    "Tên Phần Mềm": "Microsoft Office Home & Business 2021",
-    "Hãng SX": "Microsoft Corporation",
-    "Phiên Bản": "16.0",
-    "Tình Trạng Hóa Đơn (Có/Chưa)": "Có",
-    "Số Hóa Đơn / Ghi Chú": "HĐ GTGT #0023412"
+    "Serial": "DL7090-KT01",
+    "Model": "Dell OptiPlex 7090",
+    "Tên phần mềm (Name)": "Microsoft Office Home & Business 2021",
+    "Phiên bản (Version)": "16.0.14332.20204",
+    "Nhà phát hành (Publisher)": "Microsoft Corporation",
+    "Ngày cài (Install Date)": "2023-08-15",
+    "Dung lượng (Size)": "3.85 GB",
+    "Kiến trúc": "64-bit",
+    "Phạm vi": "Machine",
+    "Vị trí cài đặt (Location)": "C:\\Program Files\\Microsoft Office\\root\\Office16",
+    "Chuỗi gỡ cài đặt (Uninstall String)": "MsiExec.exe /X{90160000-0011-0000-1000-0000000FF1CE}"
   },
   {
-    "Tên Máy Tính (Hostname)": "KT-DESKTOP-01",
-    "Tên Phần Mềm": "7-Zip",
-    "Hãng SX": "Igor Pavlov",
-    "Phiên Bản": "23.01",
-    "Tình Trạng Hóa Đơn (Có/Chưa)": "FOSS",
-    "Số Hóa Đơn / Ghi Chú": "FOSS (Không cần HĐ)"
+    "Serial": "DL7090-KT01",
+    "Model": "Dell OptiPlex 7090",
+    "Tên phần mềm (Name)": "7-Zip 23.01 (x64)",
+    "Phiên bản (Version)": "23.01",
+    "Nhà phát hành (Publisher)": "Igor Pavlov",
+    "Ngày cài (Install Date)": "2023-08-15",
+    "Dung lượng (Size)": "5.2 MB",
+    "Kiến trúc": "64-bit",
+    "Phạm vi": "Machine",
+    "Vị trí cài đặt (Location)": "C:\\Program Files\\7-Zip",
+    "Chuỗi gỡ cài đặt (Uninstall String)": "\"C:\\Program Files\\7-Zip\\Uninstall.exe\""
   },
   {
-    "Tên Máy Tính (Hostname)": "KT-DESKTOP-01",
-    "Tên Phần Mềm": "WinRAR",
-    "Hãng SX": "win.rar GmbH",
-    "Phiên Bản": "6.24",
-    "Tình Trạng Hóa Đơn (Có/Chưa)": "Chưa",
-    "Số Hóa Đơn / Ghi Chú": "Cần gỡ bỏ thay bằng 7-Zip"
+    "Serial": "DL7090-KT01",
+    "Model": "Dell OptiPlex 7090",
+    "Tên phần mềm (Name)": "WinRAR 6.24 (64-bit)",
+    "Phiên bản (Version)": "6.24.0",
+    "Nhà phát hành (Publisher)": "win.rar GmbH",
+    "Ngày cài (Install Date)": "2023-09-02",
+    "Dung lượng (Size)": "9.4 MB",
+    "Kiến trúc": "64-bit",
+    "Phạm vi": "Machine",
+    "Vị trí cài đặt (Location)": "C:\\Program Files\\WinRAR",
+    "Chuỗi gỡ cài đặt (Uninstall String)": "\"C:\\Program Files\\WinRAR\\uninstall.exe\""
   },
   {
-    "Tên Máy Tính (Hostname)": "KD-LAPTOP-02",
-    "Tên Phần Mềm": "TeamViewer",
-    "Hãng SX": "TeamViewer Germany",
-    "Phiên Bản": "15.48",
-    "Tình Trạng Hóa Đơn (Có/Chưa)": "Chưa",
-    "Số Hóa Đơn / Ghi Chú": "Bẫy Free cá nhân"
+    "Serial": "LNV-T14-KD02",
+    "Model": "Lenovo ThinkPad T14 Gen 2",
+    "Tên phần mềm (Name)": "TeamViewer",
+    "Phiên bản (Version)": "15.48.4",
+    "Nhà phát hành (Publisher)": "TeamViewer Germany GmbH",
+    "Ngày cài (Install Date)": "2023-11-10",
+    "Dung lượng (Size)": "78.2 MB",
+    "Kiến trúc": "64-bit",
+    "Phạm vi": "Machine",
+    "Vị trí cài đặt (Location)": "C:\\Program Files\\TeamViewer",
+    "Chuỗi gỡ cài đặt (Uninstall String)": "\"C:\\Program Files\\TeamViewer\\uninstall.exe\""
   },
   {
-    "Tên Máy Tính (Hostname)": "ENG-WORKSTATION-01",
-    "Tên Phần Mềm": "AutoCAD 2024",
-    "Hãng SX": "Autodesk Inc.",
-    "Phiên Bản": "24.3",
-    "Tình Trạng Hóa Đơn (Có/Chưa)": "Chưa",
-    "Số Hóa Đơn / Ghi Chú": "Chưa có bản quyền VAT"
+    "Serial": "DL3660-ENG01",
+    "Model": "Dell Precision 3660",
+    "Tên phần mềm (Name)": "AutoCAD 2024",
+    "Phiên bản (Version)": "24.3.61.0",
+    "Nhà phát hành (Publisher)": "Autodesk, Inc.",
+    "Ngày cài (Install Date)": "2023-05-20",
+    "Dung lượng (Size)": "4.12 GB",
+    "Kiến trúc": "64-bit",
+    "Phạm vi": "Machine",
+    "Vị trí cài đặt (Location)": "C:\\Program Files\\Autodesk\\AutoCAD 2024",
+    "Chuỗi gỡ cài đặt (Uninstall String)": "\"C:\\Program Files\\Autodesk\\AutoCAD 2024\\Setup\\Setup.exe\" /P {ACAD-7101:409} /M ACAD /language en-US"
   },
   {
-    "Tên Máy Tính (Hostname)": "ENG-WORKSTATION-01",
-    "Tên Phần Mềm": "Phần mềm nội bộ công ty",
-    "Hãng SX": "Nội bộ",
-    "Phiên Bản": "1.0",
-    "Tình Trạng Hóa Đơn (Có/Chưa)": "FOSS",
-    "Số Hóa Đơn / Ghi Chú": "Tool viết riêng nội bộ"
+    "Serial": "DL3660-ENG01",
+    "Model": "Dell Precision 3660",
+    "Tên phần mềm (Name)": "Phần mềm nội bộ công ty",
+    "Phiên bản (Version)": "1.0",
+    "Nhà phát hành (Publisher)": "Nội bộ công ty",
+    "Ngày cài (Install Date)": "2023-06-01",
+    "Dung lượng (Size)": "45 MB",
+    "Kiến trúc": "64-bit",
+    "Phạm vi": "Machine",
+    "Vị trí cài đặt (Location)": "C:\\CompanyApps\\InternalTool",
+    "Chuỗi gỡ cài đặt (Uninstall String)": "C:\\CompanyApps\\InternalTool\\uninstall.exe"
   }
 ];
 
 const sampleWb = XLSX.utils.book_new();
-XLSX.utils.book_append_sheet(sampleWb, XLSX.utils.json_to_sheet(sampleComputers), "Danh Sách Máy Tính");
-XLSX.utils.book_append_sheet(sampleWb, XLSX.utils.json_to_sheet(sampleInstalls), "Danh Sách Phần Mềm");
-XLSX.utils.book_append_sheet(sampleWb, catWs, "Danh Mục Tiêu Chuẩn (Catalog)");
+XLSX.utils.book_append_sheet(sampleWb, XLSX.utils.json_to_sheet(sampleComputers), "1. Danh sach may tinh");
+XLSX.utils.book_append_sheet(sampleWb, XLSX.utils.json_to_sheet(sampleInstalls), "2. Phan mem");
+XLSX.utils.book_append_sheet(sampleWb, catWs, "3. Danh muc tieu chuan");
 
 // Save to data/ and public/data/
 const dirs = ['./data', './public/data'];

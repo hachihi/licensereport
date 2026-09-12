@@ -548,71 +548,97 @@
     const wb = XLSX.utils.book_new();
 
     // -------------------------------------------------------------------------
-    // SHEET 1: 1_Danh_Sach_May_Tinh
+    // SHEET 1: 1. Danh sach may tinh
     // -------------------------------------------------------------------------
     const ws1Data = [
       ["HACHIHI SAM - DANH SÁCH MÁY TÍNH KIỂM KÊ (MẪU CHUẨN DOANH NGHIỆP)"],
-      ["Hướng dẫn: Điền thông tin máy tính trong công ty. Cột Hostname là mã định danh chính duy nhất. Có thể xóa các dòng mẫu bên dưới và dán dữ liệu thực tế."],
+      ["Hướng dẫn: Điền thông tin máy tính trong công ty. Số Serial / Service Tag dùng để liên kết với phần mềm cài đặt ở Sheet 2."],
       [],
-      ["STT", "Tên Máy Tính (Hostname)", "Người Sử Dụng", "Phòng Ban", "Số Serial / Service Tag", "Hệ Điều Hành", "Cấu Hình / Model Phần Cứng", "Ghi Chú"],
-      [1, "KT-DESKTOP-01", "Nguyễn Thị Hoa", "Kế Toán", "serial001", "Windows 11 Pro 64-bit", "Dell OptiPlex 7090 - Core i5, 16GB RAM, 512GB SSD", "Máy kế toán trưởng"],
-      [2, "KD-LAPTOP-02", "Trần Văn Nam", "Kinh Doanh", "serial002", "Windows 10 Pro 64-bit", "Lenovo ThinkPad T14 - Core i7, 16GB RAM, 512GB SSD", "Laptop kinh doanh thường đi thị trường"],
-      [3, "ENG-WORKSTATION-01", "Lê Minh Tuấn", "Kỹ Thuật", "serial003", "Windows 11 Pro", "Dell Precision 3660 - Core i9, 32GB RAM, RTX 4080", "Máy thiết kế bản vẽ kỹ thuật CAD/CAM"],
-      [4, "HR-PC-01", "Phạm Thu Trang", "Hành Chính Nhân Sự", "serial004", "Windows 11 Home", "HP ProDesk 400 G7 - Core i3, 8GB RAM, 256GB SSD", "Cần nâng cấp lên Windows Pro cho DN"],
-      [5, "MKT-LAPTOP-01", "Hoàng Anh Dũng", "Marketing", "serial005", "macOS Sonoma 14.5", "MacBook Pro M2 - 16GB Unified RAM, 512GB SSD", "Thiết kế media, banner và video sản phẩm"],
+      [
+        "STT",
+        "Tên Máy Tính (Hostname)",
+        "Người Sử Dụng",
+        "Phòng Ban",
+        "Hệ Điều Hành",
+        "Model / Cấu Hình Phần Cứng",
+        "Số Serial / Service Tag",
+        "Hãng Sản Xuất",
+        "Vi Xử Lý (CPU)",
+        "Bộ Nhớ RAM",
+        "Ổ Cứng Lưu Trữ",
+        "VGA (Card màn hình)"
+      ],
+      [1, "KT-DESKTOP-01", "Nguyễn Thị Hoa", "Kế Toán", "Windows 11 Pro 64-bit", "Dell OptiPlex 7090", "DL7090-KT01", "Dell Inc.", "Intel Core i5-11500 @ 2.70GHz", "16GB DDR4", "512GB NVMe SSD", "Intel UHD Graphics 750"],
+      [2, "KD-LAPTOP-02", "Trần Văn Nam", "Kinh Doanh", "Windows 10 Pro 64-bit", "Lenovo ThinkPad T14 Gen 2", "LNV-T14-KD02", "Lenovo", "Intel Core i7-1165G7 @ 2.80GHz", "16GB DDR4", "512GB NVMe SSD", "Intel Iris Xe Graphics"],
+      [3, "ENG-WORKSTATION-01", "Lê Minh Tuấn", "Kỹ Thuật", "Windows 11 Pro 64-bit", "Dell Precision 3660", "DL3660-ENG01", "Dell Inc.", "Intel Core i9-12900K @ 3.20GHz", "32GB DDR5", "1TB NVMe SSD + 2TB HDD", "NVIDIA GeForce RTX 4080 16GB"],
+      [4, "HR-PC-01", "Phạm Thu Trang", "Hành Chính Nhân Sự", "Windows 11 Home", "HP ProDesk 400 G7", "HP400G7-HR01", "HP Inc.", "Intel Core i3-10100 @ 3.60GHz", "8GB DDR4", "256GB NVMe SSD", "Intel UHD Graphics 630"],
+      [5, "MKT-LAPTOP-01", "Hoàng Anh Dũng", "Marketing", "Windows 11 Pro 64-bit", "Asus ROG Zephyrus G16", "ASUS-G16-MKT01", "ASUS", "Intel Core i7-13620H @ 2.40GHz", "32GB DDR5", "1TB NVMe SSD", "NVIDIA GeForce RTX 4060 8GB"],
+      [6, "IT-ADMIN-01", "Vũ Quang Huy", "Công Nghệ Thông Tin", "Windows 11 Pro 64-bit", "Dell Latitude 5430", "DL5430-IT01", "Dell Inc.", "Intel Core i7-1255U @ 1.70GHz", "16GB DDR4", "512GB NVMe SSD", "Intel Iris Xe Graphics"]
     ];
 
     const ws1 = XLSX.utils.aoa_to_sheet(ws1Data);
-    applyHachihiBanner(ws1, 7);
-    applyHachihiTableHeader(ws1, 3, 8, HACHIHI_THEME.BLUE_PRIMARY);
-    applyHachihiDataRows(ws1, 4, 8, 8, {
-      alignments: { 0: "center", 1: "left", 2: "left", 3: "left", 4: "center", 5: "left", 6: "left", 7: "left" },
-      boldCols: [1]
+    applyHachihiBanner(ws1, 11);
+    applyHachihiTableHeader(ws1, 3, 12, HACHIHI_THEME.BLUE_PRIMARY);
+    applyHachihiDataRows(ws1, 4, ws1Data.length - 1, 12, {
+      alignments: { 0: "center", 1: "left", 2: "left", 3: "left", 4: "left", 5: "left", 6: "center", 7: "left", 8: "left", 9: "center", 10: "left", 11: "left" },
+      boldCols: [1, 6]
     });
-    ws1['!rows'] = [{ hpt: 30 }, { hpt: 22 }, { hpt: 10 }, { hpt: 26 }, { hpt: 22 }, { hpt: 22 }, { hpt: 22 }, { hpt: 22 }, { hpt: 22 }];
+    ws1['!rows'] = [{ hpt: 30 }, { hpt: 22 }, { hpt: 10 }, { hpt: 26 }, { hpt: 22 }, { hpt: 22 }, { hpt: 22 }, { hpt: 22 }, { hpt: 22 }, { hpt: 22 }];
     formatWorksheet(ws1, {
-      customWidths: [8, 22, 22, 20, 22, 24, 38, 32],
+      customWidths: [8, 22, 20, 20, 22, 26, 22, 16, 28, 16, 22, 24],
       startDataRow: 3,
       freezeRow: 4,
-      autoFilterRange: "A4:H9"
+      autoFilterRange: `A4:L${ws1Data.length}`
     });
-    XLSX.utils.book_append_sheet(wb, ws1, "1_Danh_Sach_May_Tinh");
+    XLSX.utils.book_append_sheet(wb, ws1, "1. Danh sach may tinh");
 
     // -------------------------------------------------------------------------
-    // SHEET 2: 2_Danh_Sach_Phan_Mem
+    // SHEET 2: 2. Phan mem
     // -------------------------------------------------------------------------
     const ws2Data = [
-      ["HACHIHI SAM - DANH SÁCH PHẦN MỀM CÀI ĐẶT & ĐỐI SOÁT HÓA ĐƠN (MẪU CHUẨN)"],
-      ["Hướng dẫn: 2 cột đầu là Số Serial và Model máy tính. Nhập chi tiết phần mềm cài trên từng máy (Hostname) và đối soát hóa đơn VAT GTGT bản quyền."],
+      ["HACHIHI SAM - DANH SÁCH PHẦN MỀM CÀI ĐẶT (MẪU CHUẨN DOANH NGHIỆP)"],
+      ["Hướng dẫn: Cột Serial và Model dùng để liên kết tự động với Số Serial và Model tương ứng của máy tính ở Sheet 1."],
       [],
-      ["Số Serial Máy Tính", "Model / Cấu Hình Máy Tính", "STT", "Tên Máy Tính (Hostname)", "Tên Phần Mềm Cài Đặt", "Hãng Sản Xuất", "Phiên Bản", "Tình Trạng Hóa Đơn (Có / Chưa / FOSS)", "Số Hóa Đơn VAT / Hợp Đồng", "Ghi Chú Kiểm Toán"],
-      ["DL7090-KT01", "Dell OptiPlex 7090", 1, "KT-DESKTOP-01", "Microsoft Office Home & Business 2021", "Microsoft", "16.0", "Có", "HĐ GTGT #0023412", "Đã có HĐ VAT đầy đủ hợp lệ"],
-      ["DL7090-KT01", "Dell OptiPlex 7090", 2, "KT-DESKTOP-01", "7-Zip", "Igor Pavlov", "23.01", "FOSS", "Miễn phí FOSS 100%", "Mã nguồn mở miễn phí cho doanh nghiệp (0đ)"],
-      ["DL7090-KT01", "Dell OptiPlex 7090", 3, "KT-DESKTOP-01", "WinRAR 6.24", "win.rar GmbH", "6.24", "Chưa", "Chưa có hóa đơn", "Bẫy dùng thử 40 ngày, cần thay bằng 7-Zip"],
-      ["LNV-T14-KD02", "Lenovo ThinkPad T14", 4, "KD-LAPTOP-02", "TeamViewer 15", "TeamViewer", "15.48", "Chưa", "Chưa có hóa đơn", "Bẫy Free cá nhân, vi phạm điều khoản công ty"],
-      ["DL3660-ENG01", "Dell Precision 3660", 5, "ENG-WORKSTATION-01", "AutoCAD 2024", "Autodesk", "24.3", "Chưa", "Chưa có hóa đơn", "Rủi ro kiểm tra bản quyền cao, cần mua bổ sung"],
-      ["DL3660-ENG01", "Dell Precision 3660", 6, "ENG-WORKSTATION-01", "Phần mềm nội bộ công ty", "Nội bộ", "1.0", "FOSS", "Nội bộ tự phát triển", "An toàn, miễn phí cho doanh nghiệp"],
-      ["HP400G7-HR01", "HP ProDesk 400 G7", 7, "HR-PC-01", "Unikey 4.3 RC5", "Phạm Kim Long", "4.3", "FOSS", "Miễn phí 100%", "Bộ gõ tiếng Việt chuẩn FOSS"],
-      ["MBP-M2-MKT01", "MacBook Pro M2", 8, "MKT-LAPTOP-01", "Adobe Photoshop 2024", "Adobe Systems", "25.2", "Có", "HĐ Adobe VIP #891230", "Đã mua thuê bao hàng năm bản quyền hợp lệ"],
+      [
+        "Serial",
+        "Model",
+        "Tên phần mềm (Name)",
+        "Phiên bản (Version)",
+        "Nhà phát hành (Publisher)",
+        "Ngày cài (Install Date)",
+        "Dung lượng (Size)",
+        "Kiến trúc",
+        "Phạm vi",
+        "Vị trí cài đặt (Location)",
+        "Chuỗi gỡ cài đặt (Uninstall String)"
+      ],
+      ["DL7090-KT01", "Dell OptiPlex 7090", "Microsoft Office Home & Business 2021", "16.0.14332.20204", "Microsoft Corporation", "2023-08-15", "3.85 GB", "64-bit", "Machine", "C:\\Program Files\\Microsoft Office\\root\\Office16", "MsiExec.exe /X{90160000-0011-0000-1000-0000000FF1CE}"],
+      ["DL7090-KT01", "Dell OptiPlex 7090", "7-Zip 23.01 (x64)", "23.01", "Igor Pavlov", "2023-08-15", "5.2 MB", "64-bit", "Machine", "C:\\Program Files\\7-Zip", "\"C:\\Program Files\\7-Zip\\Uninstall.exe\""],
+      ["DL7090-KT01", "Dell OptiPlex 7090", "WinRAR 6.24 (64-bit)", "6.24.0", "win.rar GmbH", "2023-09-02", "9.4 MB", "64-bit", "Machine", "C:\\Program Files\\WinRAR", "\"C:\\Program Files\\WinRAR\\uninstall.exe\""],
+      ["LNV-T14-KD02", "Lenovo ThinkPad T14 Gen 2", "TeamViewer", "15.48.4", "TeamViewer Germany GmbH", "2023-11-10", "78.2 MB", "64-bit", "Machine", "C:\\Program Files\\TeamViewer", "\"C:\\Program Files\\TeamViewer\\uninstall.exe\""],
+      ["DL3660-ENG01", "Dell Precision 3660", "AutoCAD 2024", "24.3.61.0", "Autodesk, Inc.", "2023-05-20", "4.12 GB", "64-bit", "Machine", "C:\\Program Files\\Autodesk\\AutoCAD 2024", "\"C:\\Program Files\\Autodesk\\AutoCAD 2024\\Setup\\Setup.exe\" /P {ACAD-7101:409} /M ACAD /language en-US"],
+      ["DL3660-ENG01", "Dell Precision 3660", "Phần mềm nội bộ công ty", "1.0", "Nội bộ công ty", "2023-06-01", "45 MB", "64-bit", "Machine", "C:\\CompanyApps\\InternalTool", "C:\\CompanyApps\\InternalTool\\uninstall.exe"],
+      ["HP400G7-HR01", "HP ProDesk 400 G7", "UniKey 4.3 RC5", "4.3 RC5", "Pham Kim Long", "2023-02-14", "1.2 MB", "64-bit", "Machine", "C:\\Program Files\\UniKey", "C:\\Program Files\\UniKey\\unins000.exe"],
+      ["ASUS-G16-MKT01", "Asus ROG Zephyrus G16", "Adobe Photoshop 2024", "25.2.0", "Adobe Systems Incorporated", "2023-12-05", "4.50 GB", "64-bit", "Machine", "C:\\Program Files\\Adobe\\Adobe Photoshop 2024", "C:\\Program Files (x86)\\Common Files\\Adobe\\Adobe Desktop Common\\HDBox\\Uninstaller.exe"],
+      ["DL5430-IT01", "Dell Latitude 5430", "Visual Studio Code", "1.85.1", "Microsoft Corporation", "2024-01-10", "345 MB", "64-bit", "User", "C:\\Users\\huyvq\\AppData\\Local\\Programs\\Microsoft VS Code", "\"C:\\Users\\huyvq\\AppData\\Local\\Programs\\Microsoft VS Code\\unins000.exe\""]
     ];
 
     const ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
-    applyHachihiBanner(ws2, 9);
-    applyHachihiTableHeader(ws2, 3, 10, HACHIHI_THEME.BLUE_PRIMARY);
-    applyHachihiDataRows(ws2, 4, 11, 10, {
-      alignments: { 0: "center", 1: "left", 2: "center", 3: "left", 4: "left", 5: "left", 6: "center", 7: "center", 8: "left", 9: "left" },
-      badgeTypes: { 7: "invoiceStatus" },
-      boldCols: [3, 4]
+    applyHachihiBanner(ws2, 10);
+    applyHachihiTableHeader(ws2, 3, 11, HACHIHI_THEME.BLUE_PRIMARY);
+    applyHachihiDataRows(ws2, 4, ws2Data.length - 1, 11, {
+      alignments: { 0: "center", 1: "left", 2: "left", 3: "center", 4: "left", 5: "center", 6: "center", 7: "center", 8: "center", 9: "left", 10: "left" },
+      boldCols: [0, 2]
     });
     ws2['!rows'] = [{ hpt: 30 }, { hpt: 22 }, { hpt: 10 }, { hpt: 26 }];
     formatWorksheet(ws2, {
-      customWidths: [22, 28, 8, 22, 36, 20, 14, 22, 25, 36],
+      customWidths: [20, 24, 32, 18, 24, 16, 14, 12, 12, 36, 40],
       startDataRow: 3,
       freezeRow: 4,
       freezeCol: 2,
-      autoFilterRange: "A4:J12"
+      autoFilterRange: `A4:K${ws2Data.length}`
     });
-    XLSX.utils.book_append_sheet(wb, ws2, "2_Danh_Sach_Phan_Mem");
+    XLSX.utils.book_append_sheet(wb, ws2, "2. Phan mem");
 
     // -------------------------------------------------------------------------
     // SHEET 3: 3_Danh_Muc_Catalog
@@ -709,7 +735,7 @@
         "Vi Xử Lý (CPU)",
         "Bộ Nhớ RAM",
         "Ổ Cứng Lưu Trữ",
-        "Tập Tin Nguồn"
+        "VGA (Card màn hình)"
       ]
     ];
 
@@ -726,7 +752,7 @@
         c.cpu || "",
         c.ram || "",
         c.disk || "",
-        c.sourceFile || ""
+        c.vga || ""
       ]);
     });
 
@@ -735,39 +761,34 @@
     applyHachihiTableHeader(ws1, 3, 12, HACHIHI_THEME.BLUE_PRIMARY);
     applyHachihiDataRows(ws1, 4, ws1Data.length - 1, 12, {
       alignments: { 0: "center", 1: "left", 2: "left", 3: "left", 4: "left", 5: "left", 6: "center", 7: "left", 8: "left", 9: "center", 10: "left", 11: "left" },
-      boldCols: [1]
+      boldCols: [1, 6]
     });
     ws1['!rows'] = [{ hpt: 30 }, { hpt: 22 }, { hpt: 10 }, { hpt: 26 }];
     formatWorksheet(ws1, {
-      customWidths: [8, 22, 22, 20, 26, 28, 24, 18, 28, 22, 22, 28],
+      customWidths: [8, 22, 20, 20, 22, 26, 22, 16, 28, 16, 22, 24],
       startDataRow: 3,
       freezeRow: 4,
       autoFilterRange: `A4:L${ws1Data.length}`
     });
-    XLSX.utils.book_append_sheet(wb, ws1, "1_Danh_Sach_May_Tinh");
+    XLSX.utils.book_append_sheet(wb, ws1, "1. Danh sach may tinh");
 
-    // SHEET 2: 2_Danh_Sach_Phan_Mem
+    // SHEET 2: 2. Phan mem
     const ws2Data = [
-      [`HACHIHI SAM - BẢNG HỢP NHẤT PHẦN MỀM CÀI ĐẶT & ĐỐI SOÁT HÓA ĐƠN (${safeClient.toUpperCase()})`],
-      [`2 CỘT ĐẦU TIÊN LÀ SỐ SERIAL VÀ MODEL MÁY TÍNH • Tổng cộng ${installations ? installations.length : 0} lượt cài đặt • Đã đồng bộ từ các file nạp`],
+      [`HACHIHI SAM - BẢNG HỢP NHẤT PHẦN MỀM CÀI ĐẶT (${safeClient.toUpperCase()})`],
+      [`CỘT SERIAL VÀ MODEL ĐỒNG BỘ VỚI SHEET 1 • Tổng cộng ${installations ? installations.length : 0} lượt cài đặt • Đã gộp từ các file kiểm kê`],
       [],
       [
-        "Số Serial Máy Tính",
-        "Model / Cấu Hình Máy Tính",
-        "STT",
-        "Tên Máy Tính (Hostname)",
-        "Người Sử Dụng",
-        "Phòng Ban",
-        "Tên Phần Mềm Cài Đặt",
-        "Hãng Sản Xuất",
-        "Phiên Bản",
-        "Loại Bản Quyền",
-        "Mức Rủi Ro",
-        "Tình Trạng Hóa Đơn",
-        "Số Hóa Đơn VAT / Ghi Chú",
-        "Đơn Giá Dự Toán (VNĐ)",
-        "Khuyến Nghị / FOSS Thay Thế",
-        "Tập Tin Nguồn"
+        "Serial",
+        "Model",
+        "Tên phần mềm (Name)",
+        "Phiên bản (Version)",
+        "Nhà phát hành (Publisher)",
+        "Ngày cài (Install Date)",
+        "Dung lượng (Size)",
+        "Kiến trúc",
+        "Phạm vi",
+        "Vị trí cài đặt (Location)",
+        "Chuỗi gỡ cài đặt (Uninstall String)"
       ]
     ];
 
@@ -776,58 +797,187 @@
       if (c && c.hostname) compMap.set(String(c.hostname).trim().toUpperCase(), c);
     });
 
-    (installations || []).forEach((i, idx) => {
+    (installations || []).forEach((i) => {
       const hUpper = String(i.computerHostname || "").trim().toUpperCase();
       const matchedComp = compMap.get(hUpper) || {};
-      const serial = i.serial || matchedComp.serial || matchedComp.serviceTag || "N/A";
-      const model = i.model || matchedComp.model || matchedComp.hardwareModel || "N/A";
+      const serial = i.computerSerial || i.serial || matchedComp.serial || "N/A";
+      const model = i.computerModel || i.model || matchedComp.model || "N/A";
 
       ws2Data.push([
         serial,
         model,
-        idx + 1,
-        i.computerHostname || "",
-        i.userName || matchedComp.user || "Chưa gán",
-        i.department || matchedComp.department || "N/A",
-        i.rawSoftwareName || i.displayName,
+        i.rawSoftwareName || i.displayName || "",
+        i.version || "N/A",
         i.vendor || "Chưa rõ",
-        i.version || "Latest",
-        i.licenseType === "FREE_OPEN_SOURCE"
-          ? "Miễn Phí FOSS"
-          : i.licenseType === "FREE_PERSONAL_ONLY"
-            ? "Bẫy Bản Quyền Cá Nhân"
-            : "Thương Mại",
-        i.auditRisk === "LOW" ? "Thấp (An toàn)" : i.auditRisk === "CRITICAL" ? "Nghiêm trọng" : "Rủi ro cao",
-        i.invoiceStatus === "HAS_INVOICE"
-          ? "Có Hóa Đơn"
-          : i.invoiceStatus === "NOT_APPLICABLE" || i.licenseType === "FREE_OPEN_SOURCE"
-            ? "Miễn Phí FOSS"
-            : "Thiếu Hóa Đơn",
-        i.invoiceNumber || "",
-        (i.invoiceStatus === "MISSING_INVOICE" && i.licenseType !== "FREE_OPEN_SOURCE") ? (i.estimatedPriceVND || 0) : 0,
-        i.actionDetails || i.recommendedAlternative || i.suggestedAction || "",
-        i.sourceFile || matchedComp.sourceFile || ""
+        i.installDate || "",
+        i.size || "",
+        i.architecture || "",
+        i.scope || "",
+        i.installLocation || "",
+        i.uninstallString || ""
       ]);
     });
 
     const ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
-    applyHachihiBanner(ws2, 15);
-    applyHachihiTableHeader(ws2, 3, 16, HACHIHI_THEME.BLUE_PRIMARY);
-    applyHachihiDataRows(ws2, 4, ws2Data.length - 1, 16, {
-      alignments: { 0: "center", 1: "left", 2: "center", 3: "left", 4: "left", 5: "left", 6: "left", 7: "left", 8: "center", 9: "center", 10: "center", 11: "center", 12: "left", 13: "right", 14: "left", 15: "left" },
-      numberFormats: { 13: '#,##0 "₫"' },
-      badgeTypes: { 9: "licenseType", 10: "risk", 11: "invoiceStatus" },
-      boldCols: [0, 3, 6]
+    applyHachihiBanner(ws2, 10);
+    applyHachihiTableHeader(ws2, 3, 11, HACHIHI_THEME.BLUE_PRIMARY);
+    applyHachihiDataRows(ws2, 4, ws2Data.length - 1, 11, {
+      alignments: { 0: "center", 1: "left", 2: "left", 3: "center", 4: "left", 5: "center", 6: "center", 7: "center", 8: "center", 9: "left", 10: "left" },
+      boldCols: [0, 2]
     });
     ws2['!rows'] = [{ hpt: 30 }, { hpt: 22 }, { hpt: 10 }, { hpt: 26 }];
     formatWorksheet(ws2, {
-      customWidths: [22, 28, 8, 20, 20, 18, 32, 18, 14, 20, 16, 18, 24, 20, 36, 26],
+      customWidths: [20, 24, 32, 18, 24, 16, 14, 12, 12, 36, 40],
       startDataRow: 3,
       freezeRow: 4,
       freezeCol: 2,
-      autoFilterRange: `A4:P${ws2Data.length}`
+      autoFilterRange: `A4:K${ws2Data.length}`
     });
-    XLSX.utils.book_append_sheet(wb, ws2, "2_Danh_Sach_Phan_Mem");
+    XLSX.utils.book_append_sheet(wb, ws2, "2. Phan mem");
+
+    // =========================================================================
+    // SHEET 3: 3. Thong ke & Bieu do (Visual Charts & Insights)
+    // =========================================================================
+    const totalComps = (computers || []).length;
+    const totalInsts = (installations || []).length;
+
+    // Tính toán Top phần mềm
+    const swCounts = new Map();
+    (installations || []).forEach((inst) => {
+      const name = (inst.rawSoftwareName || inst.displayName || "Chưa rõ").trim();
+      const pub = (inst.vendor || "Chưa rõ").trim();
+      const key = `${name}___${pub}`;
+      swCounts.set(key, (swCounts.get(key) || 0) + 1);
+    });
+    const sortedSw = Array.from(swCounts.entries())
+      .map(([k, count]) => {
+        const [name, pub] = k.split("___");
+        return { name, pub, count };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    // Tính toán Hãng sản xuất
+    const mfgCounts = new Map();
+    (computers || []).forEach((c) => {
+      const mfg = (c.manufacturer || "Chưa rõ").trim() || "Chưa rõ";
+      mfgCounts.set(mfg, (mfgCounts.get(mfg) || 0) + 1);
+    });
+    const sortedMfg = Array.from(mfgCounts.entries())
+      .map(([mfg, count]) => ({ mfg, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // Tính toán Hệ điều hành
+    const osCounts = new Map();
+    (computers || []).forEach((c) => {
+      const os = (c.os || "Chưa rõ").trim() || "Chưa rõ";
+      osCounts.set(os, (osCounts.get(os) || 0) + 1);
+    });
+    const sortedOs = Array.from(osCounts.entries())
+      .map(([os, count]) => ({ os, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // Tính toán Phòng ban
+    const deptCounts = new Map();
+    (computers || []).forEach((c) => {
+      const dept = (c.department || "Chung").trim() || "Chung";
+      deptCounts.set(dept, (deptCounts.get(dept) || 0) + 1);
+    });
+    const sortedDept = Array.from(deptCounts.entries())
+      .map(([dept, count]) => ({ dept, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const ws3Data = [
+      [`HACHIHI SAM - BẢNG ĐỒ THỊ TRỰC QUAN & THỐNG KÊ HỢP NHẤT (${safeClient.toUpperCase()})`],
+      [`Thống kê phân bổ từ ${fileSourceCount} tập tin nạp • ${totalComps} máy tính • ${totalInsts} lượt cài đặt • Xuất ngày: ${new Date().toLocaleDateString("vi-VN")}`],
+      [],
+      ["I. TỔNG QUAN HỆ THỐNG KIỂM KÊ", "", "", "", ""],
+      ["Chỉ Số Thống Kê", "Số Lượng", "Đơn Vị", "Tỷ Lệ / Nhận Định", "Biểu Đồ Tiến Độ Trực Quan (Progress Bar)"],
+      ["Tổng Số Thiết Bị Máy Tính", totalComps, "Thiết bị", "Toàn bộ hệ thống", makeAsciiBar(100, 20)],
+      ["Tổng Lượt Phần Mềm Cài Đặt", totalInsts, "Lượt cài", "Trung bình " + (totalComps > 0 ? (totalInsts / totalComps).toFixed(1) : 0) + " app/máy", makeAsciiBar(100, 20)],
+      ["Số Phòng Ban / Bộ Phận", sortedDept.length, "Bộ phận", "Bao phủ toàn công ty", makeAsciiBar(Math.min(100, sortedDept.length * 15), 20)],
+      ["Số Hãng Sản Xuất Thiết Bị", sortedMfg.length, "Hãng phần cứng", "Đa dạng hóa hạ tầng", makeAsciiBar(Math.min(100, sortedMfg.length * 20), 20)],
+      [],
+      ["II. TOP 10 PHẦN MỀM ĐƯỢC CÀI ĐẶT NHIỀU NHẤT TRONG DOANH NGHIỆP", "", "", "", ""],
+      ["STT", "Tên Phần Mềm", "Nhà Phát Hành", "Số Lượt Cài", "Tỷ Lệ Phủ (% Máy Tính)", "Đồ Thị Phân Bổ Thanh Ngang (Visual Bar Graph)"],
+    ];
+
+    sortedSw.forEach((sw, idx) => {
+      const pct = totalComps > 0 ? Math.min(100, Math.round((sw.count / totalComps) * 100)) : 0;
+      ws3Data.push([
+        idx + 1,
+        sw.name,
+        sw.pub,
+        sw.count,
+        `${pct}%`,
+        makeAsciiBar(pct, 22)
+      ]);
+    });
+
+    ws3Data.push([]);
+    ws3Data.push(["III. CƠ CẤU HỆ ĐIỀU HÀNH & HÃNG SẢN XUẤT", "", "", "", ""]);
+    ws3Data.push(["Nhóm Phân Loại", "Chi Tiết", "Số Lượng", "Tỷ Lệ (%)", "Biểu Đồ Thanh Tỷ Trọng"]);
+
+    sortedOs.slice(0, 5).forEach((item) => {
+      const pct = totalComps > 0 ? Math.round((item.count / totalComps) * 100) : 0;
+      ws3Data.push([
+        "Hệ Điều Hành",
+        item.os,
+        item.count,
+        `${pct}%`,
+        makeAsciiBar(pct, 20)
+      ]);
+    });
+
+    sortedMfg.slice(0, 5).forEach((item) => {
+      const pct = totalComps > 0 ? Math.round((item.count / totalComps) * 100) : 0;
+      ws3Data.push([
+        "Hãng Máy Tính",
+        item.mfg,
+        item.count,
+        `${pct}%`,
+        makeAsciiBar(pct, 20)
+      ]);
+    });
+
+    ws3Data.push([]);
+    ws3Data.push(["IV. PHÂN BỔ THIẾT BỊ THEO PHÒNG BAN", "", "", "", ""]);
+    ws3Data.push(["STT", "Tên Phòng Ban", "Số Thiết Bị", "Tỷ Lệ (%)", "Biểu Đồ Quy Mô"]);
+
+    sortedDept.forEach((item, idx) => {
+      const pct = totalComps > 0 ? Math.round((item.count / totalComps) * 100) : 0;
+      ws3Data.push([
+        idx + 1,
+        item.dept,
+        item.count,
+        `${pct}%`,
+        makeAsciiBar(pct, 22)
+      ]);
+    });
+
+    const ws3 = XLSX.utils.aoa_to_sheet(ws3Data);
+    applyHachihiBanner(ws3, 4);
+
+    // Style headers for sections
+    [3, 10, sortedSw.length + 12, sortedSw.length + sortedOs.slice(0, 5).length + sortedMfg.slice(0, 5).length + 14].forEach((rowIdx) => {
+      if (rowIdx < ws3Data.length && ws3Data[rowIdx]) {
+        applyHachihiSectionHeader(ws3, rowIdx, 5);
+      }
+    });
+
+    // Style table headers
+    [4, 11, sortedSw.length + 13, sortedSw.length + sortedOs.slice(0, 5).length + sortedMfg.slice(0, 5).length + 15].forEach((rowIdx) => {
+      if (rowIdx < ws3Data.length && ws3Data[rowIdx]) {
+        applyHachihiTableHeader(ws3, rowIdx, 5, HACHIHI_THEME.BLUE_PRIMARY);
+      }
+    });
+
+    formatWorksheet(ws3, {
+      customWidths: [8, 36, 24, 16, 32],
+      startDataRow: 3,
+      freezeRow: 5
+    });
+    XLSX.utils.book_append_sheet(wb, ws3, "3. Thong ke & Bieu do");
 
     const cleanClient = String(clientName || "Doanh_Nghiep").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "_");
     saveWorkbook(wb, `Hachihi_SAM_Hop_Nhat_Kiem_Ke_${cleanClient}_${new Date().toISOString().slice(0, 10)}.xlsx`);
