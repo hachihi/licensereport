@@ -21,6 +21,8 @@
         return `Ke_Hoach_Toi_Uu_FOSS_Tiet_Kiem_${cleanClient}_${cleanDate}`;
       case "MACHINE_OVERVIEW":
         return `Bao_Cao_Tong_Quan_May_Tinh_Da_Kiem_Tra_${cleanClient}_${cleanDate}`;
+      case "PER_DEVICE_AUDIT":
+        return `Tam_Soat_Thiet_Bi_Va_Phan_Mem_${cleanClient}_${cleanDate}`;
       case "BOTH":
       default:
         return `Bao_Cao_Toan_Dien_SAM_Audit_${cleanClient}_${cleanDate}`;

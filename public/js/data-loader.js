@@ -6,11 +6,12 @@
    * Parses inventory file (3 sheets or 1-2 sheets or CSV).
    * Detects Computers sheet, Installations sheet, and optional Catalog sheet (Sheet 3).
    */
-  function parseInventoryWorkbook(buffer, activeCatalog) {
+  function parseInventoryWorkbook(buffer, activeCatalog, fileName) {
     if (typeof XLSX === 'undefined') {
       throw new Error('Thư viện XLSX chưa được nạp.');
     }
 
+    const currentFileName = fileName || '';
     const data = new Uint8Array(buffer);
     const workbook = XLSX.read(data, { type: 'array' });
     const sheetNames = workbook.SheetNames;
@@ -98,8 +99,13 @@
           user: getVal(row, ["user", "người dùng", "nhân viên", "người sử dụng"]),
           department: getVal(row, ["department", "phòng ban", "bộ phận"]),
           os: getVal(row, ["os", "hệ điều hành", "windows"]),
-          model: getVal(row, ["model", "cấu hình", "dòng máy"]),
-          serial: getVal(row, ["serial", "số serial", "serial number", "s/n"]) || "N/A",
+          model: getVal(row, ["model", "cấu hình", "dòng máy", "model máy tính", "cấu hình / model", "cấu hình / model phần cứng"]),
+          serial: getVal(row, ["serial", "số serial", "serial number", "s/n", "số serial máy tính", "số serial / service tag"]) || "N/A",
+          manufacturer: getVal(row, ["hãng", "nhà sản xuất", "manufacturer", "brand", "make"]),
+          cpu: getVal(row, ["cpu", "vi xử lý", "processor"]),
+          ram: getVal(row, ["ram", "bộ nhớ", "memory"]),
+          disk: getVal(row, ["ổ cứng", "disk", "storage", "ssd", "hdd"]),
+          sourceFile: currentFileName,
         };
         compMap.set(norm, compObj);
         newComputers.push(compObj);
@@ -110,15 +116,31 @@
         const host = getVal(row, ["hostname", "tên máy", "máy tính", "pc name"]) || "KT-PC-01";
         const rawName = getVal(row, ["tên phần mềm", "phần mềm", "software", "ứng dụng"]);
         const pub = getVal(row, ["hãng", "vendor", "nhà sản xuất", "publisher"]);
+        const rowSerial = getVal(row, ["số serial máy tính", "serial máy tính", "serial", "số serial", "serial number", "s/n", "số serial / service tag"]);
+        const rowModel = getVal(row, ["model máy tính", "model / cấu hình máy tính", "cấu hình / model máy tính", "model", "cấu hình", "dòng máy"]);
 
         if (rawName) {
           const norm = host.toUpperCase();
-          const comp = compMap.get(norm) || {
-            hostname: host,
-            user: "Chưa gán",
-            department: "Chung",
-            serial: getVal(row, ["serial", "số serial", "serial number", "s/n"]) || "N/A",
-          };
+          let comp = compMap.get(norm);
+          if (!comp) {
+            comp = {
+              hostname: host,
+              user: getVal(row, ["user", "người dùng", "nhân viên", "người sử dụng"]) || "Chưa gán",
+              department: getVal(row, ["department", "phòng ban", "bộ phận"]) || "Chung",
+              serial: rowSerial || "N/A",
+              model: rowModel || "N/A",
+              sourceFile: currentFileName,
+            };
+            compMap.set(norm, comp);
+            newComputers.push(comp);
+          } else {
+            if ((!comp.serial || comp.serial === 'N/A') && rowSerial) {
+              comp.serial = rowSerial;
+            }
+            if ((!comp.model || comp.model === 'N/A') && rowModel) {
+              comp.model = rowModel;
+            }
+          }
 
           const matched = matchFn(rawName, pub, catalogToUse);
           const isFree = matched.licenseType === "FREE_OPEN_SOURCE";
@@ -134,9 +156,14 @@
             invStatus = "HAS_INVOICE";
           }
 
+          const finalSerial = (comp && comp.serial && comp.serial !== 'N/A') ? comp.serial : (rowSerial || 'N/A');
+          const finalModel = (comp && comp.model && comp.model !== 'N/A') ? comp.model : (rowModel || 'N/A');
+
           newInstalls.push({
             id: "imp_" + idx,
             computerHostname: host,
+            computerSerial: finalSerial,
+            computerModel: finalModel,
             userName: comp.user || getVal(row, ["user", "người dùng"]),
             department: comp.department || getVal(row, ["department", "phòng ban"]),
             rawSoftwareName: rawName,
@@ -157,6 +184,7 @@
             invoiceStatus: invStatus,
             invoiceNumber: getVal(row, ["số hóa đơn", "ghi chú"]),
             isTrap: matched ? matched.isTrap : false,
+            sourceFile: currentFileName,
           });
         }
       });
@@ -173,6 +201,8 @@
           getVal(row, ["hostname", "tên máy", "máy tính", "host"]) || "PC-" + (idx + 1);
         const rawName = getVal(row, ["tên phần mềm", "phần mềm", "software"]);
         const pub = getVal(row, ["hãng", "vendor", "nhà sản xuất", "publisher"]);
+        const rowSerial = getVal(row, ["số serial máy tính", "serial máy tính", "serial", "số serial", "serial number", "s/n", "số serial / service tag"]);
+        const rowModel = getVal(row, ["model máy tính", "model / cấu hình máy tính", "cấu hình / model máy tính", "model", "cấu hình", "dòng máy"]);
 
         if (rawName) {
           const norm = host.toUpperCase();
@@ -182,11 +212,24 @@
               user: getVal(row, ["user", "người dùng", "nhân viên"]),
               department: getVal(row, ["department", "phòng ban"]),
               os: getVal(row, ["os", "hệ điều hành"]),
-              model: getVal(row, ["model", "cấu hình"]),
-              serial: getVal(row, ["serial", "số serial", "serial number", "s/n"]) || "N/A",
+              model: rowModel || getVal(row, ["model", "cấu hình"]),
+              serial: rowSerial || getVal(row, ["serial", "số serial", "serial number", "s/n"]) || "N/A",
+              manufacturer: getVal(row, ["hãng", "nhà sản xuất", "manufacturer", "brand", "make"]),
+              cpu: getVal(row, ["cpu", "vi xử lý", "processor"]),
+              ram: getVal(row, ["ram", "bộ nhớ", "memory"]),
+              disk: getVal(row, ["ổ cứng", "disk", "storage", "ssd", "hdd"]),
+              sourceFile: currentFileName,
             };
             compMap.set(norm, compObj);
             newComputers.push(compObj);
+          } else {
+            const existing = compMap.get(norm);
+            if ((!existing.serial || existing.serial === 'N/A') && rowSerial) {
+              existing.serial = rowSerial;
+            }
+            if ((!existing.model || existing.model === 'N/A') && rowModel) {
+              existing.model = rowModel;
+            }
           }
           const comp = compMap.get(norm);
           const matched = matchFn(rawName, pub, catalogToUse);
@@ -203,9 +246,14 @@
             invStatus = "HAS_INVOICE";
           }
 
+          const finalSerial = (comp && comp.serial && comp.serial !== 'N/A') ? comp.serial : (rowSerial || 'N/A');
+          const finalModel = (comp && comp.model && comp.model !== 'N/A') ? comp.model : (rowModel || 'N/A');
+
           newInstalls.push({
             id: "imp_" + idx,
             computerHostname: host,
+            computerSerial: finalSerial,
+            computerModel: finalModel,
             userName: comp.user,
             department: comp.department,
             rawSoftwareName: rawName,
@@ -226,6 +274,7 @@
             invoiceStatus: invStatus,
             invoiceNumber: getVal(row, ["số hóa đơn", "ghi chú"]),
             isTrap: matched ? matched.isTrap : false,
+            sourceFile: currentFileName,
           });
         }
       });
@@ -241,19 +290,110 @@
   }
 
   /**
-   * Reads inventory File object and parses workbook
+   * Reads multiple inventory files (File[] or FileList), parses each,
+   * merges computers (deduplicating by hostname and merging specs/serial/model),
+   * merges installations (tagging with sourceFile, computerSerial, computerModel),
+   * and merges custom catalog rules if present.
+   */
+  async function loadMultipleInventoryFiles(fileList, activeCatalog) {
+    if (!fileList || fileList.length === 0) {
+      throw new Error('Vui lòng chọn ít nhất một tập tin kiểm kê hợp lệ (.xlsx, .xls, .csv)');
+    }
+    const files = Array.from(fileList);
+    const allComputers = [];
+    const compMap = new Map(); // uppercase hostname -> computer
+    const allInstalls = [];
+    let detectedCatalogRules = null;
+    let catalogToUse = activeCatalog || [];
+    const loadedFiles = [];
+
+    for (let fIdx = 0; fIdx < files.length; fIdx++) {
+      const file = files[fIdx];
+      const buffer = await file.arrayBuffer();
+      const parsed = parseInventoryWorkbook(buffer, catalogToUse, file.name);
+
+      if (parsed.detectedCatalogRules && parsed.detectedCatalogRules.length > 0) {
+        detectedCatalogRules = parsed.detectedCatalogRules;
+        catalogToUse = detectedCatalogRules;
+      }
+
+      let compsAddedThisFile = 0;
+      (parsed.computers || []).forEach((comp) => {
+        const hostKey = (comp.hostname || '').trim().toUpperCase();
+        if (!hostKey) return;
+
+        if (!compMap.has(hostKey)) {
+          const compCopy = { ...comp, sourceFile: file.name };
+          compMap.set(hostKey, compCopy);
+          allComputers.push(compCopy);
+          compsAddedThisFile++;
+        } else {
+          // Merge missing details
+          const existing = compMap.get(hostKey);
+          ['user', 'department', 'os', 'model', 'serial', 'manufacturer', 'cpu', 'ram', 'disk'].forEach((field) => {
+            if ((!existing[field] || existing[field] === 'N/A' || existing[field] === 'Chưa gán') && comp[field] && comp[field] !== 'N/A' && comp[field] !== 'Chưa gán') {
+              existing[field] = comp[field];
+            }
+          });
+          if (comp.sourceFile && existing.sourceFile && !existing.sourceFile.includes(comp.sourceFile)) {
+            existing.sourceFile += ', ' + comp.sourceFile;
+          }
+        }
+      });
+
+      let installsAddedThisFile = 0;
+      (parsed.installations || []).forEach((inst, iIdx) => {
+        const hostKey = (inst.computerHostname || '').trim().toUpperCase();
+        const comp = compMap.get(hostKey);
+
+        const mergedSerial = (comp && comp.serial && comp.serial !== 'N/A') ? comp.serial : (inst.computerSerial || 'N/A');
+        const mergedModel = (comp && comp.model && comp.model !== 'N/A') ? comp.model : (inst.computerModel || 'N/A');
+        const mergedUser = (comp && comp.user && comp.user !== 'Chưa gán') ? comp.user : (inst.userName || 'Chưa gán');
+        const mergedDept = (comp && comp.department && comp.department !== 'Chung') ? comp.department : (inst.department || 'Chung');
+
+        allInstalls.push({
+          ...inst,
+          id: `imp_f${fIdx}_${iIdx}`,
+          computerSerial: mergedSerial,
+          computerModel: mergedModel,
+          userName: mergedUser,
+          department: mergedDept,
+          sourceFile: file.name,
+        });
+        installsAddedThisFile++;
+      });
+
+      loadedFiles.push({
+        name: file.name,
+        size: file.size,
+        computersCount: compsAddedThisFile || (parsed.computers || []).length,
+        installationsCount: installsAddedThisFile,
+      });
+    }
+
+    return {
+      files: loadedFiles,
+      computers: allComputers,
+      installations: allInstalls,
+      detectedCatalogRules,
+      sheet3Rules: detectedCatalogRules,
+    };
+  }
+
+  /**
+   * Reads inventory File object and parses workbook (accepts single file or delegates)
    */
   async function loadInventoryFile(file, activeCatalog) {
     if (!file) {
       throw new Error('Vui lòng chọn tập tin kiểm kê hợp lệ (.xlsx, .xls, .csv)');
     }
-    const buffer = await file.arrayBuffer();
-    return parseInventoryWorkbook(buffer, activeCatalog);
+    return loadMultipleInventoryFiles([file], activeCatalog);
   }
 
   global.SAM_DATA_LOADER = {
     parseInventoryWorkbook,
-    loadInventoryFile
+    loadInventoryFile,
+    loadMultipleInventoryFiles,
   };
 
 })(typeof window !== 'undefined' ? window : this);

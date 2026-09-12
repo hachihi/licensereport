@@ -32,6 +32,12 @@
   .no-print,
   .print-hidden,
   .print\:hidden,
+  th.no-print,
+  td.no-print,
+  th.print-hidden,
+  td.print-hidden,
+  th.print\:hidden,
+  td.print\:hidden,
   [role="dialog"] ~ *,
   button {
     display: none !important;

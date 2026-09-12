@@ -32,6 +32,12 @@
   .no-print,
   .print-hidden,
   .print\:hidden,
+  th.no-print,
+  td.no-print,
+  th.print-hidden,
+  td.print-hidden,
+  th.print\:hidden,
+  td.print\:hidden,
   [role="dialog"] ~ *,
   button {
     display: none !important;
@@ -143,6 +149,24 @@
 
   .print-only {
     display: block !important;
+  }
+
+  /* 6. Form inputs inside tables print as clean text */
+  input, textarea {
+    border: none !important;
+    outline: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-family: inherit !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+    color: inherit !important;
+    width: 100% !important;
+  }
+  select {
+    display: none !important;
   }
 }
 

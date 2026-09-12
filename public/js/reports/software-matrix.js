@@ -12,8 +12,26 @@
       formatVND
     } = props;
 
+    const MultiSelectFilter =
+      (global.SAM_COMPONENTS && global.SAM_COMPONENTS.MultiSelectFilter) ||
+      (global.SAM_UTILS && global.SAM_UTILS.MultiSelectFilter);
+
+    const riskOptions = [
+      { value: "CRITICAL", label: "🔴 Rủi ro Nghiêm trọng" },
+      { value: "HIGH", label: "🟠 Rủi ro Cao" },
+      { value: "LOW", label: "🟢 Rủi ro Thấp / FOSS" },
+    ];
+
+    const selectedRisks = Array.isArray(filterRisk)
+      ? filterRisk
+      : filterRisk === "ALL" || !filterRisk
+        ? ["CRITICAL", "HIGH", "LOW"]
+        : [filterRisk];
+
     const filteredList = (softwareGroups || []).filter((g) => {
-      if (filterRisk !== "ALL" && g.auditRisk !== filterRisk) return false;
+      if (selectedRisks.length > 0 && selectedRisks.length < 3 && !selectedRisks.includes(g.auditRisk)) {
+        return false;
+      }
       if (
         searchTerm &&
         !g.displayName.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -42,19 +60,26 @@
         React.createElement(
           "div",
           { className: "flex items-center gap-2 w-full sm:w-auto" },
-          React.createElement(
-            "select",
-            {
-              value: filterRisk,
-              onChange: (e) => setFilterRisk(e.target.value),
-              className:
-                "text-xs border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer w-full sm:w-auto",
-            },
-            React.createElement("option", { value: "ALL" }, "Tất cả mức rủi ro"),
-            React.createElement("option", { value: "CRITICAL" }, "Rủi ro Nghiêm trọng"),
-            React.createElement("option", { value: "HIGH" }, "Rủi ro Cao"),
-            React.createElement("option", { value: "LOW" }, "Rủi ro Thấp / Free FOSS")
-          )
+          MultiSelectFilter
+            ? React.createElement(MultiSelectFilter, {
+                label: "Mức độ rủi ro",
+                options: riskOptions,
+                selected: selectedRisks,
+                onChange: setFilterRisk,
+              })
+            : React.createElement(
+                "select",
+                {
+                  value: filterRisk,
+                  onChange: (e) => setFilterRisk(e.target.value),
+                  className:
+                    "text-xs border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer w-full sm:w-auto",
+                },
+                React.createElement("option", { value: "ALL" }, "Tất cả mức rủi ro"),
+                React.createElement("option", { value: "CRITICAL" }, "Rủi ro Nghiêm trọng"),
+                React.createElement("option", { value: "HIGH" }, "Rủi ro Cao"),
+                React.createElement("option", { value: "LOW" }, "Rủi ro Thấp / Free FOSS")
+              )
         )
       ),
 

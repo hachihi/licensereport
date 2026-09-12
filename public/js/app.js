@@ -29,6 +29,7 @@
     const [activeTab, setActiveTab] = useState('OVERVIEW');
     const [isProcessing, setIsProcessing] = useState(false);
     const [uploadStatus, setUploadStatus] = useState({ message: '', type: 'info' });
+    const [loadedFiles, setLoadedFiles] = useState([]);
     const [isDark, setIsDark] = useState(false);
 
     // Print & Executive Report metadata
@@ -198,21 +199,54 @@
       );
     };
 
-    // Inventory File Upload Handler (Excel with 2 or 3 sheets or CSV)
-    const handleInventoryUpload = async (file) => {
-      if (!file) return;
+    // Inventory File(s) Upload Handler (supports single or multiple Excel/CSV files and merging)
+    const handleInventoryUpload = async (fileList, appendMode = false) => {
+      if (!fileList || fileList.length === 0) return;
+      const files = Array.from(fileList);
       setIsProcessing(true);
-      setUploadStatus({ message: `Đang xử lý tập tin ${file.name}...`, type: 'info' });
+      const isMulti = files.length > 1 || appendMode;
+      setUploadStatus({
+        message: isMulti
+          ? `Đang nạp và hợp nhất ${files.length} tập tin kiểm kê...`
+          : `Đang xử lý tập tin ${files[0].name}...`,
+        type: 'info'
+      });
 
       try {
-        const result = await DATA_LOADER.loadInventoryFile(file, catalogRules);
+        const result = await DATA_LOADER.loadMultipleInventoryFiles(files, catalogRules);
 
-        if (result.computers && result.computers.length > 0) {
-          setComputers(result.computers);
+        let finalComputers = result.computers || [];
+        let finalRaw = result.installations || [];
+        let finalLoadedFiles = result.files || [];
+
+        if (appendMode && computers.length > 0) {
+          // Merge with existing computers (deduplicating by hostname)
+          const compMap = new Map();
+          computers.forEach((c) => compMap.set((c.hostname || '').toUpperCase(), { ...c }));
+          (result.computers || []).forEach((c) => {
+            const hostKey = (c.hostname || '').toUpperCase();
+            if (!compMap.has(hostKey)) {
+              compMap.set(hostKey, c);
+            } else {
+              const existing = compMap.get(hostKey);
+              ['user', 'department', 'os', 'model', 'serial', 'manufacturer', 'cpu', 'ram', 'disk'].forEach((field) => {
+                if ((!existing[field] || existing[field] === 'N/A' || existing[field] === 'Chưa gán') && c[field] && c[field] !== 'N/A' && c[field] !== 'Chưa gán') {
+                  existing[field] = c[field];
+                }
+              });
+              if (c.sourceFile && existing.sourceFile && !existing.sourceFile.includes(c.sourceFile)) {
+                existing.sourceFile += ', ' + c.sourceFile;
+              }
+            }
+          });
+          finalComputers = Array.from(compMap.values());
+          finalRaw = [...rawInventory, ...(result.installations || [])];
+          finalLoadedFiles = [...loadedFiles, ...(result.files || [])];
         }
-        if (result.installations && result.installations.length > 0) {
-          setRawInventory(result.installations);
-        }
+
+        setComputers(finalComputers);
+        setRawInventory(finalRaw);
+        setLoadedFiles(finalLoadedFiles);
 
         // If Excel had Sheet 3 with custom catalog rules, prioritize it!
         let currentRules = catalogRules;
@@ -220,23 +254,27 @@
           currentRules = result.sheet3Rules;
           setCatalogRules(currentRules);
           setCatalogSource('SHEET3_EXCEL');
+        }
+
+        // Run audit matching engine
+        const processed = AUDIT_ENGINE.processInstallations(finalRaw, currentRules);
+        setInstallations(processed);
+
+        // Update upload status message
+        if (finalLoadedFiles.length > 1) {
           setUploadStatus({
-            message: `Tải thành công! Đã nạp ${result.computers.length} máy, ${result.installations.length} phần mềm và cập nhật danh mục từ Sheet 3.`,
+            message: `Gộp thành công ${finalLoadedFiles.length} tập tin kiểm kê! Tổng cộng ${finalComputers.length} máy tính và ${finalRaw.length} lượt cài đặt phần mềm đã được hợp nhất vào hệ thống.`,
             type: 'success',
           });
         } else {
           setUploadStatus({
-            message: `Tải thành công ${result.computers.length} máy tính và ${result.installations.length} lượt cài đặt phần mềm.`,
+            message: `Tải thành công ${finalComputers.length} máy tính và ${finalRaw.length} lượt cài đặt phần mềm từ ${files[0].name}.`,
             type: 'success',
           });
         }
 
-        // Run audit matching engine
-        const processed = AUDIT_ENGINE.processInstallations(result.installations, currentRules);
-        setInstallations(processed);
-
         // Auto extract client name from filename if possible
-        const baseName = file.name.replace(/\.[^/.]+$/, '').replace(/kiem_?ke|inventory|sam|software/gi, '').trim();
+        const baseName = files[0].name.replace(/\.[^/.]+$/, '').replace(/kiem_?ke|inventory|sam|software|danh_sach/gi, '').trim();
         if (baseName.length > 2) {
           setClientName(baseName);
         }
@@ -393,7 +431,15 @@
 
     // Export Excel Handlers
     const handleExportExecutive = () => {
-      EXPORTER.exportExecutiveReport(executivePlanRows, metrics, clientName, auditDate);
+      EXPORTER.exportExecutiveReport(executivePlanRows, metrics, clientName, auditDate, installations, computers, kpiBreakdown);
+    };
+
+    const handleExportMergedFile = () => {
+      if (!computers || computers.length === 0) {
+        alert("Chưa có dữ liệu kiểm kê để gộp và xuất file. Vui lòng nạp các file kiểm kê trước!");
+        return;
+      }
+      EXPORTER.exportMergedInventoryWorkbook(computers, installations, catalogRules, clientName, loadedFiles);
     };
 
     const handleExportDetailed = () => {
@@ -428,7 +474,7 @@
         { className: "bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs print:hidden transition-colors duration-200" },
         React.createElement(
           "div",
-          { className: "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between" },
+          { className: "w-full max-w-[98%] 2xl:max-w-[1780px] mx-auto px-3 sm:px-6 h-16 flex items-center justify-between" },
           // Logo & Brand
           React.createElement(
             "div",
@@ -483,6 +529,16 @@
               },
               "📥 Tải File Mẫu"
             ),
+            // Export Merged Excel button (Combine all into 1 file)
+            React.createElement(
+              "button",
+              {
+                onClick: handleExportMergedFile,
+                className: "hidden lg:flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-indigo-800 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-lg transition cursor-pointer border border-indigo-200 dark:border-indigo-800",
+                title: "Gộp tất cả máy tính và phần mềm từ các file nạp làm 1 file Excel duy nhất (kèm Serial và Model)",
+              },
+              "📦 Gộp & Xuất 1 File Excel"
+            ),
             // Export Excel dropdown or button
             React.createElement(
               "div",
@@ -524,7 +580,7 @@
       // Main Container
       React.createElement(
         "main",
-        { className: "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6" },
+        { className: "w-full max-w-[98%] 2xl:max-w-[1780px] mx-auto px-3 sm:px-6 py-5 flex-1 space-y-6" },
         // Upload & Data Source Controls Bar
         React.createElement(
           "div",
@@ -532,7 +588,7 @@
           React.createElement(
             "div",
             { className: "flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4" },
-            // Left: File Upload & Drag-Drop area
+            // Left: File Upload & Drag-Drop area (supports single or multi-file)
             React.createElement(
               "div",
               { className: "flex-1 flex flex-wrap items-center gap-3" },
@@ -540,20 +596,53 @@
                 "label",
                 {
                   className: "px-4 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-bold shadow-sm transition cursor-pointer flex items-center gap-2",
+                  title: "Nhấn để chọn 1 hoặc nhiều file Excel/CSV kiểm kê cùng lúc",
                 },
-                "📂 Nạp File Kiểm Kê (Excel / CSV)",
+                "📂 Nạp File Kiểm Kê (1 hoặc Nhiều File)",
                 React.createElement("input", {
                   type: "file",
                   ref: fileInputRef,
+                  multiple: true,
                   onChange: (e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      handleInventoryUpload(e.target.files[0]);
+                    if (e.target.files && e.target.files.length > 0) {
+                      handleInventoryUpload(e.target.files, false);
                     }
                     e.target.value = "";
                   },
                   accept: ".xlsx, .xls, .csv",
                   className: "hidden",
                 })
+              ),
+              // Append more files button
+              React.createElement(
+                "label",
+                {
+                  className: "px-3 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-800 dark:text-indigo-200 rounded-xl text-xs font-semibold transition cursor-pointer border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5",
+                  title: "Nạp thêm file Excel khác để gộp tiếp vào dữ liệu hiện có",
+                },
+                "➕ Nạp Thêm File Để Gộp",
+                React.createElement("input", {
+                  type: "file",
+                  multiple: true,
+                  onChange: (e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      handleInventoryUpload(e.target.files, true);
+                    }
+                    e.target.value = "";
+                  },
+                  accept: ".xlsx, .xls, .csv",
+                  className: "hidden",
+                })
+              ),
+              // Button to export merged file right from upload bar
+              React.createElement(
+                "button",
+                {
+                  onClick: handleExportMergedFile,
+                  className: "px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs flex items-center gap-1.5",
+                  title: "Gộp dữ liệu tất cả máy tính và phần mềm thành 1 file Excel (2 cột đầu của phần mềm là Serial và Model)",
+                },
+                "📦 Gộp Làm 1 & Tải Excel"
               ),
               React.createElement(
                 "button",
@@ -620,6 +709,42 @@
               )
             )
           ),
+
+          // File summary chips if files were loaded
+          loadedFiles.length > 0 &&
+            React.createElement(
+              "div",
+              { className: "w-full pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2 text-xs" },
+              React.createElement(
+                "div",
+                { className: "flex items-center gap-2 flex-wrap" },
+                React.createElement("span", { className: "font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1" },
+                  "📚 Đã nạp " + loadedFiles.length + " tập tin kiểm kê:"
+                ),
+                loadedFiles.map((f, i) =>
+                  React.createElement(
+                    "span",
+                    {
+                      key: i,
+                      className: "px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium border border-slate-200 dark:border-slate-700 flex items-center gap-1.5",
+                      title: `${f.name} (${f.computersCount || 0} máy, ${f.installationsCount || 0} phần mềm)`
+                    },
+                    "📄 " + f.name,
+                    React.createElement("span", { className: "text-[11px] text-blue-600 dark:text-blue-400 font-semibold" }, `• ${f.computersCount || 0} máy`),
+                    React.createElement("span", { className: "text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold" }, `• ${f.installationsCount || 0} pm`)
+                  )
+                )
+              ),
+              React.createElement(
+                "button",
+                {
+                  onClick: handleExportMergedFile,
+                  className: "text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline cursor-pointer flex items-center gap-1 py-1",
+                  title: "Xuất ngay 1 file Excel tổng hợp có 2 cột đầu của phần mềm là Serial & Model",
+                },
+                "⬇️ Tải File Hợp Nhất (Đã kèm Serial & Model)"
+              )
+            ),
 
           // Upload Message / Progress Feedback
           uploadStatus.message &&

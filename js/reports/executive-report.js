@@ -217,6 +217,58 @@
     const [deviceSoftwareOverrides, setDeviceSoftwareOverrides] = React.useState({});
     const [deviceInfoOverrides, setDeviceInfoOverrides] = React.useState({});
 
+    // Track rows deleted by the user before printing/exporting
+    const [deletedExecPlanRows, setDeletedExecPlanRows] = React.useState([]);
+    const [deletedDetailInstalls, setDeletedDetailInstalls] = React.useState([]);
+    const [deletedFossItems, setDeletedFossItems] = React.useState([]);
+    const [deletedMachineRows, setDeletedMachineRows] = React.useState([]);
+    const [deletedDeviceItems, setDeletedDeviceItems] = React.useState([]);
+
+    const handleDeleteExecPlanRow = (name) => {
+      setDeletedExecPlanRows((prev) => (prev.includes(name) ? prev : [...prev, name]));
+    };
+
+    const handleDeleteDetailInstall = (key) => {
+      setDeletedDetailInstalls((prev) => (prev.includes(key) ? prev : [...prev, key]));
+    };
+
+    const handleDeleteFossItem = (key) => {
+      setDeletedFossItems((prev) => (prev.includes(key) ? prev : [...prev, key]));
+    };
+
+    const handleDeleteMachineOverviewRow = (hostname) => {
+      setDeletedMachineRows((prev) => (prev.includes(hostname) ? prev : [...prev, hostname]));
+    };
+
+    const handleDeleteDeviceItem = (itemKey) => {
+      setDeletedDeviceItems((prev) => (prev.includes(itemKey) ? prev : [...prev, itemKey]));
+    };
+
+    const handleRemoveDeviceFromAudit = (hostname) => {
+      setSelectedDeviceHostnames((prev) => {
+        const list = Array.isArray(prev) ? prev : (computers || []).map((c) => c.hostname);
+        return list.filter((h) => h !== hostname);
+      });
+    };
+
+    const handleRestoreAllDeletedRows = () => {
+      setDeletedExecPlanRows([]);
+      setDeletedDetailInstalls([]);
+      setDeletedFossItems([]);
+      setDeletedMachineRows([]);
+      setDeletedDeviceItems([]);
+      if (computers && computers.length > 0) {
+        setSelectedDeviceHostnames(computers.map((c) => c.hostname));
+      }
+    };
+
+    const totalDeletedCount =
+      deletedExecPlanRows.length +
+      deletedDetailInstalls.length +
+      deletedFossItems.length +
+      deletedMachineRows.length +
+      deletedDeviceItems.length;
+
     React.useEffect(() => {
       if (computers && computers.length > 0) {
         setSelectedDeviceHostnames((prev) => {
@@ -232,6 +284,30 @@
       }
       return (computers || []).map((c) => c.hostname);
     }, [selectedDeviceHostnames, computers]);
+
+    const activeExecPlanRows = React.useMemo(() => {
+      return (filteredExecutivePlanRows || []).filter(
+        (r) => !deletedExecPlanRows.includes(r.name)
+      );
+    }, [filteredExecutivePlanRows, deletedExecPlanRows]);
+
+    const activeTotalBudgetRequired = React.useMemo(() => {
+      return activeExecPlanRows.reduce((sum, r) => sum + (r.totalEstimated || 0), 0);
+    }, [activeExecPlanRows]);
+
+    const activeDetailInstalls = React.useMemo(() => {
+      return (detailFilteredInstalls || []).filter((inst, idx) => {
+        const key = inst.id || `${inst.computerHostname}::${inst.rawSoftwareName || inst.displayName}::${idx}`;
+        const shortKey = inst.id || `${inst.computerHostname}::${inst.rawSoftwareName || inst.displayName}`;
+        return !deletedDetailInstalls.includes(key) && !deletedDetailInstalls.includes(shortKey) && !deletedMachineRows.includes(inst.computerHostname);
+      });
+    }, [detailFilteredInstalls, deletedDetailInstalls, deletedMachineRows]);
+
+    const activeMachineOverviewRows = React.useMemo(() => {
+      return (machineOverviewRows || []).filter(
+        (m) => !deletedMachineRows.includes(m.hostname)
+      );
+    }, [machineOverviewRows, deletedMachineRows]);
 
     const allDeviceVendors = React.useMemo(() => {
       const set = new Set();
@@ -464,14 +540,18 @@
                         execPlanOverrides,
                         detailOverrides,
                         deviceSoftwareOverrides,
-                        deviceInfoOverrides
+                        deviceInfoOverrides,
+                        deletedExecPlanRows,
+                        deletedDetailInstalls,
+                        deletedMachineRows,
+                        deletedDeviceItems,
                       }
                     );
                   }
                 },
                 className:
                   "px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold shadow transition cursor-pointer flex items-center gap-1.5",
-                title: "Xuất file Excel đầy đủ 5 sheets chuẩn doanh nghiệp kèm biểu đồ trực quan",
+                title: "Xuất file Excel đầy đủ 6 sheets chuẩn doanh nghiệp kèm hệ thống biểu đồ trực quan chuyên sâu & bản đồ nhiệt phòng ban",
               },
               "📊 Xuất Excel Chuẩn"
             ),
@@ -664,38 +744,62 @@
             "div",
             {
               className:
-                "w-full flex items-center justify-between gap-2 text-[11px] text-blue-900 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg",
+                "w-full flex items-center justify-between flex-wrap gap-2 text-[11px] text-blue-900 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg",
             },
             React.createElement(
               "div",
-              { className: "flex items-center gap-1.5" },
-              React.createElement("span", { className: "text-blue-600 font-bold" }, "✏️ Chỉnh sửa trực tiếp:"),
+              { className: "flex items-center gap-1.5 flex-wrap" },
+              React.createElement("span", { className: "text-blue-700 font-bold" }, "✏️ Chỉnh sửa & Xóa dòng trước khi in:"),
               React.createElement(
                 "span",
                 null,
-                "Các cột ",
-                React.createElement("strong", { className: "text-blue-950 font-semibold" }, "Phân loại / Trạng thái / Khuyến nghị"),
-                " (và thông tin Người dùng / Phòng ban) đều có thể chỉnh sửa trực tiếp trên bảng xem trước này trước khi In / Xuất PDF."
-              )
+                "Có thể trực tiếp sửa thông tin hoặc bấm nút ",
+                React.createElement("strong", { className: "text-rose-700 font-semibold" }, "🗑️ Xóa dòng"),
+                " trên bất kỳ bảng nào để loại bỏ dòng đó khỏi bản in PDF / Excel."
+              ),
+              totalDeletedCount > 0 &&
+                React.createElement(
+                  "span",
+                  { className: "px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-[10.5px] ml-1 flex items-center gap-1" },
+                  `🗑️ Đã xóa ${totalDeletedCount} dòng/mục`
+                )
             ),
-            (Object.keys(execPlanOverrides).length > 0 ||
-              Object.keys(detailOverrides).length > 0 ||
-              Object.keys(deviceSoftwareOverrides).length > 0 ||
-              Object.keys(deviceInfoOverrides).length > 0) &&
-              React.createElement(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => {
-                    setExecPlanOverrides({});
-                    setDetailOverrides({});
-                    setDeviceSoftwareOverrides({});
-                    setDeviceInfoOverrides({});
+            React.createElement(
+              "div",
+              { className: "flex items-center gap-2 ml-auto shrink-0" },
+              totalDeletedCount > 0 &&
+                React.createElement(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: handleRestoreAllDeletedRows,
+                    className: "px-2 py-0.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 border border-indigo-300 rounded font-semibold text-[10.5px] cursor-pointer transition flex items-center gap-1",
+                    title: "Khôi phục lại toàn bộ các dòng vừa xóa trên các bảng",
                   },
-                  className: "text-[10px] text-rose-600 hover:text-rose-800 underline font-medium cursor-pointer ml-auto shrink-0",
-                },
-                "↺ Khôi phục dữ liệu gốc"
-              )
+                  "↺ Khôi phục các dòng đã xóa"
+                ),
+              (Object.keys(execPlanOverrides).length > 0 ||
+                Object.keys(detailOverrides).length > 0 ||
+                Object.keys(deviceSoftwareOverrides).length > 0 ||
+                Object.keys(deviceInfoOverrides).length > 0 ||
+                totalDeletedCount > 0) &&
+                React.createElement(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => {
+                      setExecPlanOverrides({});
+                      setDetailOverrides({});
+                      setDeviceSoftwareOverrides({});
+                      setDeviceInfoOverrides({});
+                      handleRestoreAllDeletedRows();
+                    },
+                    className: "text-[10px] text-rose-600 hover:text-rose-800 underline font-medium cursor-pointer",
+                    title: "Khôi phục dữ liệu ban đầu và hoàn tác tất cả các dòng đã xóa",
+                  },
+                  "↺ Khôi phục dữ liệu gốc"
+                )
+            )
           )
         ),
 
@@ -1156,19 +1260,19 @@
                       React.createElement(
                         "span",
                         { className: "text-[10px] font-bold text-rose-700" },
-                        formatVND(filteredTotalBudgetRequired)
+                        formatVND(activeTotalBudgetRequired)
                       )
                     ),
                     React.createElement(
                       "div",
                       { className: "space-y-1.5" },
-                      filteredExecutivePlanRows
+                      activeExecPlanRows
                         .filter((r) => r.totalEstimated > 0)
                         .slice(0, 3)
                         .map((item, idx) => {
                           const pct =
-                            filteredTotalBudgetRequired > 0
-                              ? Math.round((item.totalEstimated / filteredTotalBudgetRequired) * 100)
+                            activeTotalBudgetRequired > 0
+                              ? Math.round((item.totalEstimated / activeTotalBudgetRequired) * 100)
                               : 0;
                           return React.createElement(
                             "div",
@@ -1209,7 +1313,7 @@
                             )
                           );
                         }),
-                      filteredExecutivePlanRows.filter((r) => r.totalEstimated > 0).length === 0 &&
+                      activeExecPlanRows.filter((r) => r.totalEstimated > 0).length === 0 &&
                         React.createElement(
                           "p",
                           { className: "text-[11px] text-emerald-600 italic py-2 text-center" },
@@ -1238,25 +1342,42 @@
                 "div",
                 { className: "space-y-2" },
                 React.createElement(
-                  "h2",
-                  {
-                    className:
-                      "text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-tight",
-                  },
-                  "1. BẢNG TỔNG HỢP NHU CẦU MUA SẮM & XỬ LÝ (EXECUTIVE ACTION PLAN)"
+                  "div",
+                  { className: "flex items-center justify-between flex-wrap gap-2" },
+                  React.createElement(
+                    "h2",
+                    {
+                      className:
+                        "text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-tight",
+                    },
+                    "1. BẢNG TỔNG HỢP NHU CẦU MUA SẮM & XỬ LÝ (EXECUTIVE ACTION PLAN)"
+                  ),
+                  deletedExecPlanRows.length > 0 &&
+                    React.createElement(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => setDeletedExecPlanRows([]),
+                        className:
+                          "text-[10px] bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 px-2 py-0.5 rounded font-semibold transition cursor-pointer print-hidden no-print",
+                        title: "Khôi phục lại tất cả các phần mềm đã xóa trong bảng này",
+                      },
+                      `↺ Khôi phục ${deletedExecPlanRows.length} dòng đã xóa`
+                    )
                 ),
-                riskFilterPlan.length < riskOptions.length &&
+                (riskFilterPlan.length < riskOptions.length || deletedExecPlanRows.length > 0) &&
                   React.createElement(
                     "p",
                     {
                       className:
                         "text-[10px] text-rose-700 font-bold bg-rose-100 inline-block px-2 py-0.5 rounded",
                     },
-                    "⚠️ Đang lọc: hiển thị ",
-                    filteredExecutivePlanRows.length,
+                    "⚠️ Hiển thị: ",
+                    activeExecPlanRows.length,
                     "/",
                     executivePlanRows.length,
-                    " phần mềm theo Mức Độ Rủi Ro đã chọn"
+                    " phần mềm",
+                    deletedExecPlanRows.length > 0 ? ` (đã xóa ${deletedExecPlanRows.length} dòng trước khi in)` : ""
                   ),
                 React.createElement(
                   "div",
@@ -1326,25 +1447,43 @@
                         ),
                         React.createElement(
                           "th",
-                          { className: "p-2 text-right whitespace-nowrap" },
+                          { className: "p-2 text-right whitespace-nowrap border-r border-slate-800" },
                           "Chi Phí Dự Kiến (VNĐ)"
+                        ),
+                        React.createElement(
+                          "th",
+                          { className: "p-2 text-center w-10 whitespace-nowrap print-hidden no-print" },
+                          "Xóa"
                         )
                       )
                     ),
                     React.createElement(
                       "tbody",
                       { className: "divide-y divide-slate-200 bg-white" },
-                      filteredExecutivePlanRows.map((row) =>
+                      activeExecPlanRows.length === 0
+                        ? React.createElement(
+                            "tr",
+                            null,
+                            React.createElement(
+                              "td",
+                              {
+                                colSpan: 10,
+                                className: "p-4 text-center text-slate-500 italic",
+                              },
+                              "Không có dòng nào để hiển thị (tất cả đã bị xóa hoặc lọc)."
+                            )
+                          )
+                        : activeExecPlanRows.map((row, rowIdx) =>
                         React.createElement(
                           "tr",
-                          { key: row.stt, className: "hover:bg-slate-50 transition" },
+                          { key: row.name + rowIdx, className: "hover:bg-slate-50 transition" },
                           React.createElement(
                             "td",
                             {
                               className:
                                 "p-2 text-center border-r border-slate-200 font-medium text-slate-600",
                             },
-                            row.stt
+                            rowIdx + 1
                           ),
                           React.createElement(
                             "td",
@@ -1456,9 +1595,27 @@
                             "td",
                             {
                               className:
-                                "p-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap",
+                                "p-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap border-r border-slate-200",
                             },
                             formatVND(row.totalEstimated)
+                          ),
+                          React.createElement(
+                            "td",
+                            {
+                              className:
+                                "p-1.5 text-center print-hidden no-print whitespace-nowrap",
+                            },
+                            React.createElement(
+                              "button",
+                              {
+                                type: "button",
+                                onClick: () => handleDeleteExecPlanRow(row.name),
+                                className:
+                                  "p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition cursor-pointer text-xs",
+                                title: `Xóa phần mềm ${row.name} khỏi bản in`,
+                              },
+                              "🗑️"
+                            )
                           )
                         )
                       )
@@ -1482,9 +1639,15 @@
                           "td",
                           {
                             className:
-                              "p-2.5 text-right font-mono text-sm text-slate-900 font-black whitespace-nowrap",
+                              "p-2.5 text-right font-mono text-sm text-slate-900 font-black whitespace-nowrap border-r border-slate-300",
                           },
-                          formatVND(filteredTotalBudgetRequired)
+                          formatVND(activeTotalBudgetRequired)
+                        ),
+                        React.createElement(
+                          "td",
+                          {
+                            className: "print-hidden no-print",
+                          }
                         )
                       )
                     )
@@ -1684,31 +1847,50 @@
                   "div",
                   {
                     className:
-                      "mt-1.5 flex items-center justify-between text-[11px] bg-slate-50 px-2.5 py-1 rounded border border-slate-200",
+                      "mt-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] bg-slate-50 px-2.5 py-1 rounded border border-slate-200",
                   },
                   React.createElement(
-                    "span",
-                    null,
-                    "Tổng số dòng hiển thị: ",
+                    "div",
+                    { className: "flex items-center gap-2" },
                     React.createElement(
-                      "strong",
-                      { className: "text-slate-900 font-bold" },
-                      detailFilteredInstalls.length,
-                      " lượt cài"
+                      "span",
+                      null,
+                      "Tổng số dòng hiển thị: ",
+                      React.createElement(
+                        "strong",
+                        { className: "text-slate-900 font-bold" },
+                        activeDetailInstalls.length,
+                        " lượt cài"
+                      ),
+                      " (",
+                      computers.length,
+                      " máy tính)"
                     ),
-                    " (",
-                    computers.length,
-                    " máy tính)"
+                    deletedDetailInstalls.length > 0 &&
+                      React.createElement(
+                        "button",
+                        {
+                          type: "button",
+                          onClick: () => setDeletedDetailInstalls([]),
+                          className:
+                            "text-[10px] bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 px-2 py-0.5 rounded font-semibold transition cursor-pointer print-hidden no-print",
+                          title: "Khôi phục lại tất cả các lượt cài đã xóa trong bảng này",
+                        },
+                        `↺ Khôi phục ${deletedDetailInstalls.length} lượt đã xóa`
+                      )
                   ),
                   (detailFilter === "RISKY_ONLY" ||
-                    categoryFilter.length < categoryOptions.length) &&
+                    categoryFilter.length < categoryOptions.length ||
+                    deletedDetailInstalls.length > 0) &&
                     React.createElement(
                       "span",
                       {
                         className:
                           "text-rose-700 font-bold bg-rose-100 px-2 py-0.5 rounded text-[10px]",
                       },
-                      "⚠️ Đang lọc: đang chỉ hiển thị một phần dữ liệu"
+                      deletedDetailInstalls.length > 0
+                        ? `⚠️ Đã xóa ${deletedDetailInstalls.length} dòng trước khi in`
+                        : "⚠️ Đang lọc: đang chỉ hiển thị một phần dữ liệu"
                     )
                 )
               ),
@@ -1776,16 +1958,34 @@
                       ),
                       React.createElement(
                         "th",
-                        { className: "p-1.5" },
+                        { className: "p-1.5 border-r border-slate-800" },
                         "Khuyến Nghị Xử Lý (Action Required)"
+                      ),
+                      React.createElement(
+                        "th",
+                        { className: "p-1.5 text-center w-8 whitespace-nowrap print-hidden no-print" },
+                        "Xóa"
                       )
                     )
                   ),
                   React.createElement(
                     "tbody",
                     { className: "divide-y divide-slate-200 bg-white text-[9.5px]" },
-                    detailFilteredInstalls.map((inst, idx) => {
-                      const instKey = inst.id || `${inst.computerHostname}::${inst.rawSoftwareName || inst.displayName}`;
+                    activeDetailInstalls.length === 0
+                      ? React.createElement(
+                          "tr",
+                          null,
+                          React.createElement(
+                            "td",
+                            {
+                              colSpan: 10,
+                              className: "p-4 text-center text-slate-500 italic",
+                            },
+                            "Không có dòng nào để hiển thị (tất cả đã bị xóa hoặc lọc)."
+                          )
+                        )
+                      : activeDetailInstalls.map((inst, idx) => {
+                      const instKey = inst.id || `${inst.computerHostname}::${inst.rawSoftwareName || inst.displayName}::${idx}`;
                       const defaultPmClass = utils.classifySoftware ? utils.classifySoftware(inst) : 'Thương mại';
                       const defaultInvStatusText = utils.getInvoiceText ? utils.getInvoiceText(inst) : 'Chưa có hóa đơn';
                       const defaultActionText = utils.getActionRequired ? utils.getActionRequired(inst) : 'Kiểm tra';
@@ -1934,7 +2134,7 @@
                         ),
                         React.createElement(
                           "td",
-                          { className: "p-1 text-slate-800 leading-snug" },
+                          { className: "p-1 text-slate-800 leading-snug border-r border-slate-200" },
                           React.createElement("input", {
                             type: "text",
                             value: actionText,
@@ -1958,6 +2158,24 @@
                             }`,
                             title: "Nhấn để sửa Khuyến nghị xử lý",
                           })
+                        ),
+                        React.createElement(
+                          "td",
+                          {
+                            className:
+                              "p-1 text-center print-hidden no-print whitespace-nowrap",
+                          },
+                          React.createElement(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: () => handleDeleteDetailInstall(instKey),
+                              className:
+                                "p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition cursor-pointer text-xs",
+                              title: `Xóa phần mềm ${inst.rawSoftwareName || inst.displayName} trên máy ${inst.computerHostname} khỏi bản in`,
+                            },
+                            "🗑️"
+                          )
                         )
                       );
                     })
@@ -2074,15 +2292,31 @@
                       "mt-1.5 flex items-center justify-between text-[11px] bg-slate-50 px-2.5 py-1 rounded border border-slate-200",
                   },
                   React.createElement(
-                    "span",
-                    null,
-                    "Tổng số máy đã kiểm tra: ",
+                    "div",
+                    { className: "flex items-center gap-2" },
                     React.createElement(
-                      "strong",
-                      { className: "text-slate-900 font-bold" },
-                      machineOverviewRows.length,
-                      " máy"
-                    )
+                      "span",
+                      null,
+                      "Tổng số máy đã kiểm tra: ",
+                      React.createElement(
+                        "strong",
+                        { className: "text-slate-900 font-bold" },
+                        activeMachineOverviewRows.length,
+                        " máy"
+                      )
+                    ),
+                    deletedMachineRows.length > 0 &&
+                      React.createElement(
+                        "button",
+                        {
+                          type: "button",
+                          onClick: () => setDeletedMachineRows([]),
+                          className:
+                            "text-[11px] text-blue-700 hover:text-blue-900 font-bold underline cursor-pointer print-hidden no-print ml-2",
+                          title: "Phục hồi tất cả máy đã xóa khỏi bảng này",
+                        },
+                        `↺ Khôi phục ${deletedMachineRows.length} máy đã xóa`
+                      )
                   ),
                   React.createElement(
                     "span",
@@ -2091,9 +2325,9 @@
                         "text-rose-700 font-bold bg-rose-100 px-2 py-0.5 rounded text-[10px]",
                     },
                     "⚠️ Có cảnh báo: ",
-                    machineOverviewRows.filter((m) => m.hasWarning).length,
+                    activeMachineOverviewRows.filter((m) => m.hasWarning).length,
                     "/",
-                    machineOverviewRows.length,
+                    activeMachineOverviewRows.length,
                     " máy"
                   )
                 )
@@ -2156,23 +2390,44 @@
                         "th",
                         { className: "p-1.5 text-center whitespace-nowrap" },
                         "Trạng Thái"
+                      ),
+                      React.createElement(
+                        "th",
+                        {
+                          className:
+                            "p-1.5 text-center whitespace-nowrap w-10 print-hidden no-print",
+                        },
+                        "Xóa"
                       )
                     )
                   ),
                   React.createElement(
                     "tbody",
                     { className: "divide-y divide-slate-200 bg-white text-[9.5px]" },
-                    machineOverviewRows.map((m) =>
+                    activeMachineOverviewRows.length === 0
+                      ? React.createElement(
+                          "tr",
+                          null,
+                          React.createElement(
+                            "td",
+                            {
+                              colSpan: 9,
+                              className: "p-6 text-center text-slate-500 italic",
+                            },
+                            "Không có máy tính nào để hiển thị hoặc toàn bộ máy đã bị xóa khỏi bản in."
+                          )
+                        )
+                      : activeMachineOverviewRows.map((m, idx) =>
                       React.createElement(
                         "tr",
-                        { key: m.hostname + m.stt, className: "hover:bg-slate-50" },
+                        { key: m.hostname + idx, className: "hover:bg-slate-50" },
                         React.createElement(
                           "td",
                           {
                             className:
                               "p-1.5 text-center border-r border-slate-200 font-medium text-slate-600",
                           },
-                          m.stt
+                          idx + 1
                         ),
                         React.createElement(
                           "td",
@@ -2221,7 +2476,7 @@
                         ),
                         React.createElement(
                           "td",
-                          { className: "p-1.5 text-center whitespace-nowrap" },
+                          { className: "p-1.5 text-center whitespace-nowrap border-r border-slate-200" },
                           m.hasWarning
                             ? React.createElement(
                                 "span",
@@ -2239,6 +2494,24 @@
                                 },
                                 "✓ Đạt Yêu Cầu"
                               )
+                        ),
+                        React.createElement(
+                          "td",
+                          {
+                            className:
+                              "p-1.5 text-center print-hidden no-print whitespace-nowrap",
+                          },
+                          React.createElement(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: () => handleDeleteMachineRow(m.hostname),
+                              className:
+                                "p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition cursor-pointer text-xs",
+                              title: `Xóa máy ${m.hostname} khỏi bản in`,
+                            },
+                            "🗑️"
+                          )
                         )
                       )
                     )
@@ -2347,101 +2620,143 @@
                       { className: "text-slate-950 font-bold" },
                       auditDate
                     )
-                  )
+                  ),
+                  deletedFossItems.length > 0 &&
+                    React.createElement(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => setDeletedFossItems([]),
+                        className:
+                          "text-xs text-blue-700 hover:text-blue-900 font-bold underline cursor-pointer print-hidden no-print ml-auto",
+                        title: "Khôi phục lại các gợi ý FOSS đã xóa",
+                      },
+                      `↺ Khôi phục ${deletedFossItems.length} gợi ý đã xóa`
+                    )
                 )
               ),
 
               React.createElement(
                 "div",
                 { className: "space-y-3" },
-                [
-                  {
-                    from: "WinRAR (Dùng thử quá hạn)",
-                    to: "7-Zip",
-                    saving: "Tiết kiệm: 100% (750.000 đ/máy)",
-                    desc: "Miễn phí 100% doanh nghiệp, nén nhanh, nhẹ, không bao giờ hỏi mua key bản quyền.",
-                    action: "Gỡ WinRAR -> Cài 7-Zip từ 7-zip.org hoặc chạy silent install trên mạng LAN."
-                  },
-                  {
-                    from: "TeamViewer / AnyDesk (Bản cá nhân)",
-                    to: "RustDesk / UltraViewer",
-                    saving: "Tiết kiệm: ~12.000.000 đ/năm",
-                    desc: "Không bị block timeout sau 5 phút, bảo mật cao, chi phí 0đ hoặc siêu rẻ cho doanh nghiệp.",
-                    action: "Gỡ TeamViewer cá nhân -> Cài RustDesk (tự host/FOSS) hoặc mua UltraViewer (~468k/năm)."
-                  },
-                  {
-                    from: "CCleaner Free",
-                    to: "Windows Storage Sense",
-                    saving: "Tiết kiệm: 100%",
-                    desc: "Có sẵn trên Windows 10/11, tự động dọn dẹp an toàn không lo vi phạm bản quyền thương mại.",
-                    action: "Gỡ CCleaner -> Bật Storage Sense trong Windows Settings."
-                  },
-                  {
-                    from: "Adobe Acrobat Pro (Chưa HĐ)",
-                    to: "PDFgear / Foxit Reader",
-                    saving: "Tiết kiệm: ~6.200.000 đ/máy",
-                    desc: "PDFgear cho phép chỉnh sửa text, merge PDF miễn phí 100% cho công ty.",
-                    action: "Gỡ Acrobat Pro crack -> Cài PDFgear từ pdfgear.com."
-                  },
-                  {
-                    from: "Microsoft Office (Máy phụ/Kho)",
-                    to: "ONLYOFFICE / LibreOffice",
-                    saving: "Tiết kiệm: ~5.800.000 đ/máy",
-                    desc: "Tương thích 99% định dạng Word/Excel, miễn phí hoàn toàn cho nhân viên khối hỗ trợ.",
-                    action: "Cài OnlyOffice Desktop cho nhân viên khối phụ trợ hoặc chuyển sang Google Workspace."
-                  }
-                ].map((item, idx) =>
-                  React.createElement(
-                    "div",
+                (() => {
+                  const fossList = [
                     {
-                      key: idx,
-                      className:
-                        "border border-slate-300 rounded-lg p-3 bg-slate-50/50 print-avoid-break",
+                      from: "WinRAR (Dùng thử quá hạn)",
+                      to: "7-Zip",
+                      saving: "Tiết kiệm: 100% (750.000 đ/máy)",
+                      desc: "Miễn phí 100% doanh nghiệp, nén nhanh, nhẹ, không bao giờ hỏi mua key bản quyền.",
+                      action: "Gỡ WinRAR -> Cài 7-Zip từ 7-zip.org hoặc chạy silent install trên mạng LAN."
                     },
-                    React.createElement(
+                    {
+                      from: "TeamViewer / AnyDesk (Bản cá nhân)",
+                      to: "RustDesk / UltraViewer",
+                      saving: "Tiết kiệm: ~12.000.000 đ/năm",
+                      desc: "Không bị block timeout sau 5 phút, bảo mật cao, chi phí 0đ hoặc siêu rẻ cho doanh nghiệp.",
+                      action: "Gỡ TeamViewer cá nhân -> Cài RustDesk (tự host/FOSS) hoặc mua UltraViewer (~468k/năm)."
+                    },
+                    {
+                      from: "CCleaner Free",
+                      to: "Windows Storage Sense",
+                      saving: "Tiết kiệm: 100%",
+                      desc: "Có sẵn trên Windows 10/11, tự động dọn dẹp an toàn không lo vi phạm bản quyền thương mại.",
+                      action: "Gỡ CCleaner -> Bật Storage Sense trong Windows Settings."
+                    },
+                    {
+                      from: "Adobe Acrobat Pro (Chưa HĐ)",
+                      to: "PDFgear / Foxit Reader",
+                      saving: "Tiết kiệm: ~6.200.000 đ/máy",
+                      desc: "PDFgear cho phép chỉnh sửa text, merge PDF miễn phí 100% cho công ty.",
+                      action: "Gỡ Acrobat Pro crack -> Cài PDFgear từ pdfgear.com."
+                    },
+                    {
+                      from: "Microsoft Office (Máy phụ/Kho)",
+                      to: "ONLYOFFICE / LibreOffice",
+                      saving: "Tiết kiệm: ~5.800.000 đ/máy",
+                      desc: "Tương thích 99% định dạng Word/Excel, miễn phí hoàn toàn cho nhân viên khối hỗ trợ.",
+                      action: "Cài OnlyOffice Desktop cho nhân viên khối phụ trợ hoặc chuyển sang Google Workspace."
+                    }
+                  ].filter((item) => !deletedFossItems.includes(item.from));
+
+                  if (fossList.length === 0) {
+                    return React.createElement(
                       "div",
-                      { className: "flex justify-between items-center mb-1.5" },
-                      React.createElement(
-                        "span",
-                        { className: "font-bold text-xs text-slate-900" },
-                        React.createElement(
-                          "span",
-                          { className: "line-through text-rose-600 font-bold" },
-                          item.from
-                        ),
-                        " ➡️ ",
-                        React.createElement(
-                          "span",
-                          { className: "text-emerald-700 font-bold" },
-                          item.to
-                        )
-                      ),
-                      React.createElement(
-                        "span",
-                        {
-                          className:
-                            "text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded",
-                        },
-                        item.saving
-                      )
-                    ),
-                    React.createElement(
-                      "p",
-                      { className: "text-[11px] text-slate-600" },
-                      item.desc
-                    ),
+                      { className: "p-6 text-center text-slate-500 italic bg-slate-50 rounded-lg border border-slate-200" },
+                      "Tất cả gợi ý FOSS đã được xóa khỏi bản in."
+                    );
+                  }
+
+                  return fossList.map((item, idx) =>
                     React.createElement(
                       "div",
                       {
+                        key: idx,
                         className:
-                          "mt-1.5 text-[10.5px] bg-white p-2 rounded border border-slate-200 text-slate-800",
+                          "border border-slate-300 rounded-lg p-3 bg-slate-50/50 print-avoid-break relative group",
                       },
-                      React.createElement("strong", null, "🛠️ Hành động IT:"),
-                      " ",
-                      item.action
+                      React.createElement(
+                        "div",
+                        { className: "flex justify-between items-center mb-1.5" },
+                        React.createElement(
+                          "span",
+                          { className: "font-bold text-xs text-slate-900" },
+                          React.createElement(
+                            "span",
+                            { className: "line-through text-rose-600 font-bold" },
+                            item.from
+                          ),
+                          " ➡️ ",
+                          React.createElement(
+                            "span",
+                            { className: "text-emerald-700 font-bold" },
+                            item.to
+                          )
+                        ),
+                        React.createElement(
+                          "div",
+                          { className: "flex items-center gap-2" },
+                          React.createElement(
+                            "span",
+                            {
+                              className:
+                                "text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded",
+                            },
+                            item.saving
+                          ),
+                          React.createElement(
+                            "button",
+                            {
+                              type: "button",
+                              onClick: () =>
+                                setDeletedFossItems((prev) =>
+                                  prev.includes(item.from) ? prev : [...prev, item.from]
+                                ),
+                              className:
+                                "p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition cursor-pointer text-xs print-hidden no-print",
+                              title: `Xóa mục FOSS "${item.from}" khỏi bản in`,
+                            },
+                            "🗑️"
+                          )
+                        )
+                      ),
+                      React.createElement(
+                        "p",
+                        { className: "text-[11px] text-slate-600" },
+                        item.desc
+                      ),
+                      React.createElement(
+                        "div",
+                        {
+                          className:
+                            "mt-1.5 text-[10.5px] bg-white p-2 rounded border border-slate-200 text-slate-800",
+                        },
+                        React.createElement("strong", null, "🛠️ Hành động IT:"),
+                        " ",
+                        item.action
+                      )
                     )
-                  )
-                )
+                  );
+                })()
               ),
 
               React.createElement(
@@ -2745,7 +3060,22 @@
                                 className:
                                   "p-2 font-bold uppercase tracking-wider text-xs sm:text-sm bg-slate-900 text-white border-b border-slate-800",
                               },
-                              details.deviceTitle
+                              React.createElement(
+                                "div",
+                                { className: "flex items-center justify-between" },
+                                React.createElement("span", null, details.deviceTitle),
+                                React.createElement(
+                                  "button",
+                                  {
+                                    type: "button",
+                                    onClick: () => handleRemoveDeviceFromAudit(comp.hostname),
+                                    className:
+                                      "text-[10.5px] font-normal text-rose-300 hover:text-white bg-rose-950/60 hover:bg-rose-900 px-2 py-0.5 rounded border border-rose-800/60 transition cursor-pointer print-hidden no-print tracking-normal normal-case",
+                                    title: `Xóa thiết bị ${comp.hostname} khỏi bản in này`,
+                                  },
+                                  "🗑️ Bỏ máy này"
+                                )
+                              )
                             )
                           )
                         ),
@@ -3052,7 +3382,23 @@
                                 className:
                                   "p-1.5 font-bold uppercase text-[11px] text-blue-900 tracking-wide",
                               },
-                              "3. DANH SÁCH PHẦN MỀM CÀI ĐẶT TRÊN MÁY"
+                              React.createElement(
+                                "div",
+                                { className: "flex items-center justify-between" },
+                                React.createElement("span", null, "3. DANH SÁCH PHẦN MỀM CÀI ĐẶT TRÊN MÁY"),
+                                deletedDeviceItems.length > 0 &&
+                                  React.createElement(
+                                    "button",
+                                    {
+                                      type: "button",
+                                      onClick: () => setDeletedDeviceItems([]),
+                                      className:
+                                        "text-[10px] font-bold text-blue-700 hover:text-blue-900 underline cursor-pointer print-hidden no-print normal-case tracking-normal",
+                                      title: "Khôi phục lại các phần mềm đã xóa",
+                                    },
+                                    `↺ Khôi phục ${deletedDeviceItems.length} phần mềm đã xóa`
+                                  )
+                              )
                             )
                           ),
                           React.createElement(
@@ -3115,147 +3461,180 @@
                                     ),
                                     React.createElement(
                                       "th",
-                                      { className: "p-2 w-48 font-bold" },
+                                      { className: "p-2 w-48 font-bold border-r border-slate-300" },
                                       "Đánh Giá Sơ Bộ"
+                                    ),
+                                    React.createElement(
+                                      "th",
+                                      { className: "p-2 w-10 text-center font-bold print-hidden no-print" },
+                                      "Xóa"
                                     )
                                   )
                                 ),
                                 React.createElement(
                                   "tbody",
                                   { className: "divide-y divide-slate-200" },
-                                  filteredItems.length === 0
-                                    ? React.createElement(
+                                  (() => {
+                                    const activePerDeviceItems = filteredItems.filter((item) => {
+                                      const itemKey = `${comp.hostname}::${item.isOS ? '__OS__' : item.name}`;
+                                      return !deletedDeviceItems.includes(itemKey);
+                                    });
+
+                                    if (activePerDeviceItems.length === 0) {
+                                      return React.createElement(
                                         "tr",
                                         null,
                                         React.createElement(
                                           "td",
                                           {
-                                            colSpan: 6,
+                                            colSpan: 7,
                                             className:
                                               "p-4 text-center text-slate-500 italic",
                                           },
-                                          "Không có phần mềm nào phù hợp với bộ lọc đã chọn."
+                                          "Không có phần mềm nào phù hợp hoặc đã bị xóa khỏi bản in."
                                         )
-                                      )
-                                    : filteredItems.map((item, idx) =>
-                                        React.createElement(
-                                          "tr",
-                                          {
-                                            key: idx,
-                                            className: item.isOS
-                                              ? "bg-blue-50/30 hover:bg-blue-50/50"
-                                              : "hover:bg-slate-50",
-                                          },
-                                          React.createElement(
-                                            "td",
-                                            {
-                                              className:
-                                                "p-2 text-center border-r border-slate-200 font-medium text-slate-600",
-                                            },
-                                            String(idx + 1).padStart(2, "0")
-                                          ),
-                                          React.createElement(
-                                            "td",
-                                            {
-                                              className:
-                                                "p-2 border-r border-slate-200 font-medium text-slate-900",
-                                            },
-                                            item.name,
-                                            item.version &&
-                                              React.createElement(
-                                                "span",
-                                                {
-                                                  className:
-                                                    "text-slate-500 font-normal ml-1",
-                                                },
-                                                `(${item.version})`
-                                              )
-                                          ),
-                                          (() => {
-                                            const itemKey = `${comp.hostname}::${item.isOS ? '__OS__' : item.name}`;
-                                            const curCategory = deviceSoftwareOverrides[itemKey]?.category !== undefined ? deviceSoftwareOverrides[itemKey].category : item.category;
-                                            const curLicense = deviceSoftwareOverrides[itemKey]?.licenseTypeLabel !== undefined ? deviceSoftwareOverrides[itemKey].licenseTypeLabel : item.licenseTypeLabel;
-                                            const curEvaluation = deviceSoftwareOverrides[itemKey]?.evaluation !== undefined ? deviceSoftwareOverrides[itemKey].evaluation : item.evaluation;
+                                      );
+                                    }
 
-                                            return [
-                                              React.createElement(
-                                                "td",
-                                                {
-                                                  key: "cat",
-                                                  className:
-                                                    "p-1 border-r border-slate-200 text-slate-700",
+                                    return activePerDeviceItems.map((item, idx) =>
+                                      React.createElement(
+                                        "tr",
+                                        {
+                                          key: idx,
+                                          className: item.isOS
+                                            ? "bg-blue-50/30 hover:bg-blue-50/50"
+                                            : "hover:bg-slate-50",
+                                        },
+                                        React.createElement(
+                                          "td",
+                                          {
+                                            className:
+                                              "p-2 text-center border-r border-slate-200 font-medium text-slate-600",
+                                          },
+                                          String(idx + 1).padStart(2, "0")
+                                        ),
+                                        React.createElement(
+                                          "td",
+                                          {
+                                            className:
+                                              "p-2 border-r border-slate-200 font-medium text-slate-900",
+                                          },
+                                          item.name,
+                                          item.version &&
+                                            React.createElement(
+                                              "span",
+                                              {
+                                                className:
+                                                  "text-slate-500 font-normal ml-1",
+                                              },
+                                              `(${item.version})`
+                                            )
+                                        ),
+                                        (() => {
+                                          const itemKey = `${comp.hostname}::${item.isOS ? '__OS__' : item.name}`;
+                                          const curCategory = deviceSoftwareOverrides[itemKey]?.category !== undefined ? deviceSoftwareOverrides[itemKey].category : item.category;
+                                          const curLicense = deviceSoftwareOverrides[itemKey]?.licenseTypeLabel !== undefined ? deviceSoftwareOverrides[itemKey].licenseTypeLabel : item.licenseTypeLabel;
+                                          const curEvaluation = deviceSoftwareOverrides[itemKey]?.evaluation !== undefined ? deviceSoftwareOverrides[itemKey].evaluation : item.evaluation;
+
+                                          return [
+                                            React.createElement(
+                                              "td",
+                                              {
+                                                key: "cat",
+                                                className:
+                                                  "p-1 border-r border-slate-200 text-slate-700",
+                                              },
+                                              React.createElement("input", {
+                                                type: "text",
+                                                value: curCategory,
+                                                onChange: (e) => {
+                                                  const val = e.target.value;
+                                                  setDeviceSoftwareOverrides((prev) => ({
+                                                    ...prev,
+                                                    [itemKey]: { ...prev[itemKey], category: val },
+                                                  }));
                                                 },
-                                                React.createElement("input", {
-                                                  type: "text",
-                                                  value: curCategory,
-                                                  onChange: (e) => {
-                                                    const val = e.target.value;
-                                                    setDeviceSoftwareOverrides((prev) => ({
-                                                      ...prev,
-                                                      [itemKey]: { ...prev[itemKey], category: val },
-                                                    }));
-                                                  },
-                                                  className:
-                                                    "w-full text-xs text-slate-700 bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
-                                                  title: "Nhấn để sửa Phân loại",
-                                                })
-                                              ),
-                                              React.createElement(
-                                                "td",
-                                                {
-                                                  key: "vendor",
-                                                  className:
-                                                    "p-2 border-r border-slate-200 text-slate-800 font-medium",
+                                                className:
+                                                  "w-full text-xs text-slate-700 bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
+                                                title: "Nhấn để sửa Phân loại",
+                                              })
+                                            ),
+                                            React.createElement(
+                                              "td",
+                                              {
+                                                key: "vendor",
+                                                className:
+                                                  "p-2 border-r border-slate-200 text-slate-800 font-medium",
+                                              },
+                                              item.vendor
+                                            ),
+                                            React.createElement(
+                                              "td",
+                                              {
+                                                key: "lic",
+                                                className:
+                                                  "p-1 border-r border-slate-200 text-slate-800",
+                                              },
+                                              React.createElement("input", {
+                                                type: "text",
+                                                value: curLicense,
+                                                onChange: (e) => {
+                                                  const val = e.target.value;
+                                                  setDeviceSoftwareOverrides((prev) => ({
+                                                    ...prev,
+                                                    [itemKey]: { ...prev[itemKey], licenseTypeLabel: val },
+                                                  }));
                                                 },
-                                                item.vendor
-                                              ),
-                                              React.createElement(
-                                                "td",
-                                                {
-                                                  key: "lic",
-                                                  className:
-                                                    "p-1 border-r border-slate-200 text-slate-800",
+                                                className:
+                                                  "w-full text-xs text-slate-800 bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
+                                                title: "Nhấn để sửa Loại bản quyền",
+                                              })
+                                            ),
+                                            React.createElement(
+                                              "td",
+                                              {
+                                                key: "eval",
+                                                className: `p-1 border-r border-slate-200 ${item.evaluationClass}`,
+                                              },
+                                              React.createElement("input", {
+                                                type: "text",
+                                                value: curEvaluation,
+                                                onChange: (e) => {
+                                                  const val = e.target.value;
+                                                  setDeviceSoftwareOverrides((prev) => ({
+                                                    ...prev,
+                                                    [itemKey]: { ...prev[itemKey], evaluation: val },
+                                                  }));
                                                 },
-                                                React.createElement("input", {
-                                                  type: "text",
-                                                  value: curLicense,
-                                                  onChange: (e) => {
-                                                    const val = e.target.value;
-                                                    setDeviceSoftwareOverrides((prev) => ({
-                                                      ...prev,
-                                                      [itemKey]: { ...prev[itemKey], licenseTypeLabel: val },
-                                                    }));
-                                                  },
-                                                  className:
-                                                    "w-full text-xs text-slate-800 bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
-                                                  title: "Nhấn để sửa Loại bản quyền",
-                                                })
-                                              ),
+                                                className:
+                                                  "w-full text-xs font-semibold bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
+                                                title: "Nhấn để sửa Đánh giá sơ bộ / Khuyến nghị",
+                                              })
+                                            ),
+                                            React.createElement(
+                                              "td",
+                                              {
+                                                key: "del",
+                                                className:
+                                                  "p-1 text-center print-hidden no-print whitespace-nowrap",
+                                              },
                                               React.createElement(
-                                                "td",
+                                                "button",
                                                 {
-                                                  key: "eval",
-                                                  className: `p-1 ${item.evaluationClass}`,
-                                                },
-                                                React.createElement("input", {
-                                                  type: "text",
-                                                  value: curEvaluation,
-                                                  onChange: (e) => {
-                                                    const val = e.target.value;
-                                                    setDeviceSoftwareOverrides((prev) => ({
-                                                      ...prev,
-                                                      [itemKey]: { ...prev[itemKey], evaluation: val },
-                                                    }));
-                                                  },
+                                                  type: "button",
+                                                  onClick: () => handleDeleteDeviceItem(itemKey),
                                                   className:
-                                                    "w-full text-xs font-semibold bg-transparent border border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-blue-50/40 px-1 py-0.5 rounded focus:outline-none transition print:border-none print:p-0 print:bg-transparent",
-                                                  title: "Nhấn để sửa Đánh giá sơ bộ / Khuyến nghị",
-                                                })
+                                                    "p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition cursor-pointer text-xs",
+                                                  title: `Xóa phần mềm "${item.name}" khỏi máy ${comp.hostname}`,
+                                                },
+                                                "🗑️"
                                               )
-                                            ];
-                                          })()
-                                        )
+                                            )
+                                          ];
+                                        })()
                                       )
+                                    );
+                                  })()
                                 )
                               )
                             )

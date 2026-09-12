@@ -5,13 +5,90 @@
   function MachineAuditReport(props) {
     const { computers, installations, updateInvoiceStatus } = props;
 
+    const MultiSelectFilter =
+      (global.SAM_COMPONENTS && global.SAM_COMPONENTS.MultiSelectFilter) ||
+      (global.SAM_UTILS && global.SAM_UTILS.MultiSelectFilter);
+
+    const [search, setSearch] = React.useState("");
+    const [selectedDepts, setSelectedDepts] = React.useState([]);
+
+    const departmentOptions = React.useMemo(() => {
+      const set = new Set();
+      (computers || []).forEach((c) => {
+        if (c.department && c.department.trim()) {
+          set.add(c.department.trim());
+        }
+      });
+      return Array.from(set).sort().map((d) => ({ value: d, label: d }));
+    }, [computers]);
+
+    React.useEffect(() => {
+      if (departmentOptions.length > 0 && selectedDepts.length === 0) {
+        setSelectedDepts(departmentOptions.map((d) => d.value));
+      }
+    }, [departmentOptions]);
+
+    const filteredComputers = React.useMemo(() => {
+      return (computers || []).filter((c) => {
+        if (
+          selectedDepts.length > 0 &&
+          selectedDepts.length < departmentOptions.length &&
+          !selectedDepts.includes(c.department || "N/A")
+        ) {
+          return false;
+        }
+        if (search.trim()) {
+          const q = search.toLowerCase();
+          const matchHost = (c.hostname || "").toLowerCase().includes(q);
+          const matchUser = (c.user || "").toLowerCase().includes(q);
+          const matchDept = (c.department || "").toLowerCase().includes(q);
+          const matchModel = (c.model || "").toLowerCase().includes(q);
+          if (!matchHost && !matchUser && !matchDept && !matchModel) {
+            return false;
+          }
+        }
+        return true;
+      });
+    }, [computers, selectedDepts, departmentOptions, search]);
+
     return React.createElement(
       "div",
       { className: "space-y-4" },
+      // Search and Filter Bar
+      React.createElement(
+        "div",
+        { className: "flex flex-col sm:flex-row justify-between items-center gap-3" },
+        React.createElement("input", {
+          type: "text",
+          placeholder: "Tìm kiếm mã máy, người dùng, model...",
+          value: search,
+          onChange: (e) => setSearch(e.target.value),
+          className:
+            "w-full sm:w-80 px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500",
+        }),
+        React.createElement(
+          "div",
+          { className: "flex items-center gap-2 w-full sm:w-auto" },
+          MultiSelectFilter && departmentOptions.length > 0
+            ? React.createElement(MultiSelectFilter, {
+                label: "🏢 Phòng ban",
+                options: departmentOptions,
+                selected: selectedDepts,
+                onChange: setSelectedDepts,
+              })
+            : null
+        )
+      ),
       React.createElement(
         "div",
         { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" },
-        (computers || []).map((comp, idx) => {
+        filteredComputers.length === 0
+          ? React.createElement(
+              "div",
+              { className: "col-span-full p-8 text-center text-slate-400 bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-300 dark:border-slate-800" },
+              "Không tìm thấy máy tính nào phù hợp với bộ lọc."
+            )
+          : filteredComputers.map((comp, idx) => {
           const compInstalls = (installations || []).filter(
             (i) => (i.computerHostname || '').toUpperCase() === (comp.hostname || '').toUpperCase()
           );
