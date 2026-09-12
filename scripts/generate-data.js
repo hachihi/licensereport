@@ -667,9 +667,41 @@ const sampleInstalls = [
   }
 ];
 
+function autoFitSheet(ws) {
+  if (!ws || !ws['!ref']) return;
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const colWidths = [];
+  const rowHeights = [];
+  for (let C = range.s.c; C <= range.e.c; ++C) {
+    let maxLen = 0;
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+      if (!cell || cell.v === undefined || cell.v === null) continue;
+      const str = String(cell.v);
+      const lines = str.split('\n');
+      for (const line of lines) {
+        if (line.length > maxLen) maxLen = line.length;
+      }
+      if (lines.length > 1) {
+        rowHeights[R] = { hpt: Math.max(rowHeights[R] ? rowHeights[R].hpt : 20, lines.length * 18) };
+      }
+    }
+    colWidths[C] = { wch: Math.min(Math.max(maxLen + 4, C === 0 ? 8 : 12), 80) };
+  }
+  ws['!cols'] = colWidths;
+  if (rowHeights.length > 0) ws['!rows'] = rowHeights;
+}
+
 const sampleWb = XLSX.utils.book_new();
-XLSX.utils.book_append_sheet(sampleWb, XLSX.utils.json_to_sheet(sampleComputers), "1. Danh sach may tinh");
-XLSX.utils.book_append_sheet(sampleWb, XLSX.utils.json_to_sheet(sampleInstalls), "2. Phan mem");
+const wsComputers = XLSX.utils.json_to_sheet(sampleComputers);
+const wsInstalls = XLSX.utils.json_to_sheet(sampleInstalls);
+autoFitSheet(wsComputers);
+autoFitSheet(wsInstalls);
+autoFitSheet(catWs);
+autoFitSheet(catInfoWs);
+
+XLSX.utils.book_append_sheet(sampleWb, wsComputers, "1. Danh sach may tinh");
+XLSX.utils.book_append_sheet(sampleWb, wsInstalls, "2. Phan mem");
 XLSX.utils.book_append_sheet(sampleWb, catWs, "3. Danh muc tieu chuan");
 
 // Save to data/ and public/data/

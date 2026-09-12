@@ -190,33 +190,34 @@
 
     return React.createElement(
       "div",
-      { className: "space-y-4" },
-      // Top Control Bar
+      { className: "space-y-6" },
+
+      // 1. Top Section Banner & Action Controls
       React.createElement(
         "div",
         {
           className:
-            "bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 transition-colors duration-200",
+            "sam-section-card flex flex-col lg:flex-row items-start lg:items-center justify-between p-4 sm:p-5 gap-4",
         },
         React.createElement(
           "div",
           null,
           React.createElement(
-            "h3",
+            "h2",
             {
               className:
-                "text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2",
+                "text-sm sm:text-base font-black text-slate-900 dark:text-white flex items-center gap-2 uppercase tracking-wide",
             },
             "⚙️ Quy Định Danh Mục & Bảng Giá Phần Mềm",
             React.createElement(
               "span",
               {
-                className: `text-[10px] px-2 py-0.5 rounded font-bold ${
+                className: `text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${
                   catalogSource === "CUSTOM_FILE" || catalogSource === "SHEET3_EXCEL"
-                    ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                    ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 border-amber-300 dark:border-amber-800"
                     : catalogSource === "REMOTE_JSON"
-                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                    : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                    ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 border-emerald-300 dark:border-emerald-800"
+                    : "bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-200 border-blue-300 dark:border-blue-800"
                 }`,
               },
               catalogSource === "CUSTOM_FILE"
@@ -230,11 +231,11 @@
           ),
           React.createElement(
             "p",
-            { className: "text-xs text-slate-500 dark:text-slate-400 mt-0.5" },
+            { className: "text-xs text-slate-500 dark:text-slate-400 mt-1" },
             catalogInfo && catalogInfo.name ? `${catalogInfo.name} (${catalogInfo.version || 'v2026.09'})` : "Hachihi SAM Standard v2026.09",
             " • Tổng số quy tắc: ",
-            React.createElement("strong", { className: "text-slate-700 dark:text-slate-200" }, catalogRules.length),
-            " (Bạn có thể bấm biểu tượng ✏️ để sửa tùy ý bất kỳ quy tắc nào)"
+            React.createElement("strong", { className: "text-blue-600 dark:text-blue-400 font-bold" }, catalogRules.length),
+            " (Bấm biểu tượng ✏️ để sửa tùy ý bất kỳ quy tắc nào)"
           )
         ),
         // Action buttons
@@ -246,7 +247,7 @@
             {
               onClick: () => setShowAddModal(true),
               className:
-                "px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer flex items-center gap-1",
+                "px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-2xs transition cursor-pointer flex items-center gap-1",
             },
             "+ Thêm Phần Mềm Mới"
           ),
@@ -302,40 +303,71 @@
         )
       ),
 
-      // Search and Filter Bar
-      React.createElement(
-        "div",
-        { className: "flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3" },
-        React.createElement("input", {
-          type: "text",
-          placeholder: "🔍 Tìm kiếm theo tên phần mềm, từ khóa quét, hãng sản xuất, đề xuất FOSS...",
-          value: searchTerm,
-          onChange: (e) => setSearchTerm(e.target.value),
-          className:
-            "w-full sm:w-96 px-3.5 py-2 text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs",
-        }),
-        React.createElement(
-          "div",
-          { className: "flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400" },
-          React.createElement(
-            "span",
-            null,
-            "Đang hiển thị: ",
-            React.createElement("strong", { className: "text-slate-700 dark:text-slate-200" }, filteredRules.length),
-            "/",
-            catalogRules.length,
-            " quy tắc"
-          )
-        )
-      ),
-
-      // Catalog Table matching user layout
+      // 2. Rules Table Card with Integrated Header and Filter Toolbar
       React.createElement(
         "div",
         {
-          className:
-            "bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors duration-200",
+          className: "sam-section-card",
         },
+        // Ribbon Header
+        React.createElement(
+          "div",
+          { className: "sam-section-ribbon flex-wrap gap-3" },
+          React.createElement(
+            "div",
+            { className: "flex items-center gap-2" },
+            React.createElement("span", { className: "text-base" }, "📋"),
+            React.createElement(
+              "h3",
+              { className: "text-xs sm:text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider" },
+              "Bảng Quy Tắc Nhận Diện & Định Giá Đơn Bản Quyền"
+            )
+          ),
+          React.createElement(
+            "div",
+            { className: "text-xs text-slate-500 dark:text-slate-400 font-medium" },
+            "Đang hiển thị: ",
+            React.createElement("strong", { className: "text-blue-600 dark:text-blue-400 font-bold" }, filteredRules.length),
+            " / ",
+            catalogRules.length,
+            " quy tắc"
+          )
+        ),
+
+        // Search & Filter Toolbar Area
+        React.createElement(
+          "div",
+          { className: "sam-toolbar-area flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3" },
+          React.createElement(
+            "div",
+            { className: "relative w-full sm:w-96" },
+            React.createElement("input", {
+              type: "text",
+              placeholder: "🔍 Tìm theo tên phần mềm, từ khóa quét, hãng, FOSS...",
+              value: searchTerm,
+              onChange: (e) => setSearchTerm(e.target.value),
+              className:
+                "w-full pl-3 pr-8 py-2 text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs",
+            }),
+            searchTerm &&
+              React.createElement(
+                "button",
+                {
+                  onClick: () => setSearchTerm(""),
+                  className: "absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer text-xs",
+                  title: "Xóa tìm kiếm"
+                },
+                "✕"
+              )
+          ),
+          React.createElement(
+            "span",
+            { className: "text-xs text-slate-500 dark:text-slate-400" },
+            "Mẹo: Bấm nút ✏️ trên từng dòng để sửa trực tiếp quy tắc"
+          )
+        ),
+
+        // Table Body
         React.createElement(
           "div",
           { className: "overflow-x-auto max-h-[640px] overflow-y-auto" },
