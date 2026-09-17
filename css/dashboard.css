@@ -7,6 +7,124 @@
   background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #172554 100%);
 }
 
+/* Large Action Stations on Main Screen */
+.sam-action-station {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 2px 5px 0 rgba(15, 23, 42, 0.05);
+  transition: all 0.2s ease-in-out;
+  position: relative;
+}
+
+.sam-action-station:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.1);
+  transform: translateY(-2px);
+}
+
+.dark .sam-action-station {
+  background-color: #0f172a;
+  border-color: #334155;
+  box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.35);
+}
+
+.dark .sam-action-station:hover {
+  border-color: #475569;
+  box-shadow: 0 8px 25px -4px rgba(0, 0, 0, 0.6);
+}
+
+/* Dropdown Menu for Advanced Settings */
+.sam-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.sam-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 50;
+  min-width: 280px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.875rem;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+  padding: 0.5rem;
+  animation: samFadeIn 0.15s ease-out;
+}
+
+.dark .sam-dropdown-menu {
+  background-color: #0f172a;
+  border-color: #334155;
+  box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.7);
+}
+
+.sam-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.75rem 0.875rem;
+  border-radius: 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #1e293b;
+  text-align: left;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+
+.dark .sam-dropdown-item {
+  color: #e2e8f0;
+}
+
+.sam-dropdown-item:hover {
+  background-color: #f1f5f9;
+  color: #1d4ed8;
+}
+
+.dark .sam-dropdown-item:hover {
+  background-color: #1e293b;
+  color: #60a5fa;
+}
+
+.sam-dropdown-item.active {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.dark .sam-dropdown-item.active {
+  background-color: #1e3a8a;
+  color: #93c5fd;
+}
+
+@keyframes samFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Reception Result Big Box */
+.sam-reception-box {
+  background: linear-gradient(to bottom right, #ffffff, #f8fafc);
+  border: 2px solid #93c5fd;
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 20px -2px rgba(37, 99, 235, 0.12);
+}
+
+.dark .sam-reception-box {
+  background: linear-gradient(to bottom right, #0f172a, #1e293b);
+  border-color: #1e40af;
+  box-shadow: 0 6px 24px -2px rgba(0, 0, 0, 0.5);
+}
+
 /* Distinct Section Cards */
 .sam-section-card {
   background-color: #ffffff;

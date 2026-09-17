@@ -26,7 +26,8 @@
     const [fallbackBanner, setFallbackBanner] = useState(false);
 
     // UI state
-    const [activeTab, setActiveTab] = useState('OVERVIEW');
+    const [activeTab, setActiveTab] = useState('HOME');
+    const [showAdvancedMenu, setShowAdvancedMenu] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [uploadStatus, setUploadStatus] = useState({ message: '', type: 'info' });
     const [loadedFiles, setLoadedFiles] = useState([]);
@@ -47,7 +48,20 @@
     const [riskFilterPlan, setRiskFilterPlan] = useState(CONSTANTS.RISK_FILTER_OPTIONS || []);
 
     const fileInputRef = useRef(null);
+    const appendFileInputRef = useRef(null);
     const catalogInputRef = useRef(null);
+    const advancedMenuRef = useRef(null);
+
+    // Close advanced menu when clicking outside
+    useEffect(() => {
+      const handleOutsideClick = (e) => {
+        if (advancedMenuRef.current && !advancedMenuRef.current.contains(e.target)) {
+          setShowAdvancedMenu(false);
+        }
+      };
+      document.addEventListener('mousedown', handleOutsideClick);
+      return () => document.removeEventListener('mousedown', handleOutsideClick);
+    }, []);
 
     // Initial Catalog Boot (Section 27 & 28)
     useEffect(() => {
@@ -72,6 +86,15 @@
       setRawInventory(defaultInsts);
       setInstallations(processed);
       setCatalogRules(initialRules);
+      setLoadedFiles([
+        {
+          name: 'sample_inventory_2026.xlsx',
+          size: 45820,
+          computersCount: defaultComps.length,
+          installationsCount: defaultInsts.length,
+          timestamp: 'Dữ liệu kiểm kê mẫu',
+        }
+      ]);
 
       // 3. Try to fetch external catalog (Auto-detects ./data/software_catalog.json or ./data/software_catalog.xlsx)
       CATALOG_LOADER.loadCatalogFromURL()
@@ -341,7 +364,7 @@
       }
 
       setUploadStatus({
-        message: 'Đã khôi phục danh mục tiêu chuẩn tích hợp sẵn.',
+        message: 'Đã đổi thành Danh Mục Mẫu chuẩn Hachihi SAM Standard v2026.09 (khôi phục danh mục gốc thành công).',
         type: 'info',
       });
     };
@@ -508,7 +531,7 @@
           // Header Actions
           React.createElement(
             "div",
-            { className: "flex items-center gap-2 sm:gap-3" },
+            { className: "flex items-center gap-2 sm:gap-2.5" },
             // Dark Mode Toggle
             React.createElement(
               "button",
@@ -519,41 +542,131 @@
               },
               isDark ? "☀️" : "🌙"
             ),
-            // Template download
+            // Quick Button: Bảng Xử Lý File (Màn hình chính)
             React.createElement(
               "button",
               {
-                onClick: handleDownloadTemplate,
-                className: "hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition cursor-pointer border border-slate-200 dark:border-slate-700",
-                title: "Tải file Excel mẫu kiểm kê để nhập dữ liệu",
+                onClick: () => setActiveTab('HOME'),
+                className: `px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 border ${
+                  activeTab === 'HOME'
+                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900 dark:border-slate-100 shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`,
+                title: "Về Trạm Nạp & Xử Lý File Kiểm Kê",
               },
-              "📥 Tải File Mẫu"
+              "📁 Bảng Xử Lý File"
             ),
-            // Export Merged Excel button (Combine all into 1 file)
-            React.createElement(
-              "button",
-              {
-                onClick: handleExportMergedFile,
-                className: "hidden lg:flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-indigo-800 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-lg transition cursor-pointer border border-indigo-200 dark:border-indigo-800",
-                title: "Gộp tất cả máy tính và phần mềm từ các file nạp làm 1 file Excel duy nhất (kèm Serial và Model)",
-              },
-              "📦 Gộp & Xuất 1 File Excel"
-            ),
-            // Export Excel dropdown or button
+            // Menu "Các Cài Đặt Nâng Cao" (Gom 1. Báo cáo tổng quan, 2. Ma trận phần mềm, 3. Kiểm toán từng máy, 4. Kế hoạch FOSS, 5. Quy định cài đặt)
             React.createElement(
               "div",
-              { className: "hidden sm:flex items-center gap-1" },
+              { className: "sam-dropdown", ref: advancedMenuRef },
               React.createElement(
                 "button",
                 {
-                  onClick: handleExportExecutive,
-                  className: "px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-lg transition cursor-pointer border border-emerald-200 dark:border-emerald-800 flex items-center gap-1",
-                  title: "Xuất file Excel báo cáo tổng hợp",
+                  onClick: () => setShowAdvancedMenu(!showAdvancedMenu),
+                  className: `px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 border ${
+                    activeTab !== 'HOME'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                      : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`,
+                  title: "Mở menu Các Cài Đặt Nâng Cao",
                 },
-                "📊 Xuất Báo Cáo"
-              )
+                "⚙️ Các Cài Đặt Nâng Cao",
+                activeTab !== 'HOME' &&
+                  React.createElement(
+                    "span",
+                    { className: "text-[10px] px-1.5 py-0.5 rounded bg-white/20 font-semibold" },
+                    activeTab === 'OVERVIEW'
+                      ? '1. Tổng quan'
+                      : activeTab === 'SOFTWARE_MATRIX'
+                      ? '2. Ma trận'
+                      : activeTab === 'MACHINE_AUDIT'
+                      ? '3. Kiểm toán'
+                      : activeTab === 'FOSS_PLAN'
+                      ? '4. FOSS'
+                      : '5. Quy định'
+                  ),
+                React.createElement("span", { className: "text-[10px] opacity-75" }, showAdvancedMenu ? "▲" : "▼")
+              ),
+              showAdvancedMenu &&
+                React.createElement(
+                  "div",
+                  { className: "sam-dropdown-menu shadow-xl" },
+                  React.createElement(
+                    "div",
+                    { className: "px-3 py-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between" },
+                    React.createElement(
+                      "span",
+                      { className: "text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider" },
+                      "⚙️ Cài Đặt & Báo Cáo Nâng Cao"
+                    ),
+                    React.createElement(
+                      "span",
+                      { className: "text-[10px] text-blue-600 dark:text-blue-400 font-bold" },
+                      "5 Phân Hệ"
+                    )
+                  ),
+                  [
+                    { id: 'OVERVIEW', icon: '📊', label: '1. Báo Cáo Tổng Quan', badge: `${metrics.complianceScore}% Tuân thủ` },
+                    { id: 'SOFTWARE_MATRIX', icon: '📑', label: '2. Ma Trận Phần Mềm', badge: `${softwareGroups.length} nhóm` },
+                    { id: 'MACHINE_AUDIT', icon: '💻', label: '3. Kiểm Toán Từng Máy', badge: `${computers.length} máy` },
+                    { id: 'FOSS_PLAN', icon: '💡', label: '4. Kế Hoạch FOSS (0đ)', badge: `${metrics.replaceFoss} vị trí` },
+                    { id: 'CATALOG_CONFIG', icon: '⚙️', label: '5. Quy Định Cài Đặt', badge: `${catalogRules.length} quy tắc` },
+                  ].map((item) =>
+                    React.createElement(
+                      "button",
+                      {
+                        key: item.id,
+                        onClick: () => {
+                          setActiveTab(item.id);
+                          setShowAdvancedMenu(false);
+                        },
+                        className: `sam-dropdown-item ${activeTab === item.id ? 'active' : ''}`,
+                      },
+                      React.createElement(
+                        "div",
+                        { className: "flex items-center gap-2" },
+                        React.createElement("span", { className: "text-base" }, item.icon),
+                        React.createElement("span", { className: "font-bold text-xs" }, item.label)
+                      ),
+                      React.createElement(
+                        "span",
+                        {
+                          className: `text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                            activeTab === item.id
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                          }`,
+                        },
+                        item.badge
+                      )
+                    )
+                  ),
+                  React.createElement("div", { className: "my-1 border-t border-slate-100 dark:border-slate-800" }),
+                  React.createElement(
+                    "button",
+                    {
+                      onClick: () => {
+                        setActiveTab('HOME');
+                        setShowAdvancedMenu(false);
+                      },
+                      className: `sam-dropdown-item ${activeTab === 'HOME' ? 'active' : ''}`,
+                    },
+                    React.createElement(
+                      "div",
+                      { className: "flex items-center gap-2" },
+                      React.createElement("span", { className: "text-base" }, "📁"),
+                      React.createElement("span", { className: "font-bold text-xs" }, "Bảng Xử Lý File (Màn Hình Chính)")
+                    ),
+                    React.createElement(
+                      "span",
+                      { className: "text-[10px] text-blue-600 dark:text-blue-400 font-bold" },
+                      "Trang chủ"
+                    )
+                  )
+                )
             ),
-            // Print Modal Button
+            // Print Modal Button (Ngang hàng với Các Cài Đặt Nâng Cao)
             React.createElement(
               "button",
               {
@@ -582,396 +695,835 @@
         "main",
         { className: "w-full max-w-[98%] 2xl:max-w-[1780px] mx-auto px-3 sm:px-6 py-6 flex-1 space-y-6" },
 
-        // Section A: Control Console Card (Bảng Điều Khiển Nạp Dữ Liệu & Hợp Nhất)
-        React.createElement(
-          "section",
-          { className: "sam-section-card print:hidden" },
-          // Header Ribbon
-          React.createElement(
-            "div",
-            { className: "sam-section-ribbon flex-wrap gap-3" },
-            React.createElement(
+        // Main Container Content
+        activeTab === 'HOME'
+          ? React.createElement(
               "div",
-              { className: "flex items-center gap-2.5" },
-              React.createElement("span", { className: "text-lg" }, "⚡"),
+              { className: "space-y-6 animate-fadeIn" },
+
+              // Main Header Banner
               React.createElement(
                 "div",
-                null,
+                { className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4" },
                 React.createElement(
-                  "h2",
-                  { className: "text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2" },
-                  "Bảng Điều Khiển & Quản Lý Dữ Liệu Kiểm Kê",
+                  "div",
+                  { className: "flex items-center gap-3.5" },
                   React.createElement(
-                    "span",
-                    { className: "text-[10px] font-semibold text-slate-500 dark:text-slate-400 normal-case hidden sm:inline" },
-                    "(Import, Gộp File & Nạp Catalog)"
+                    "div",
+                    { className: "w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center text-2xl shadow-md shrink-0" },
+                    "⚡"
+                  ),
+                  React.createElement(
+                    "div",
+                    null,
+                    React.createElement(
+                      "h2",
+                      { className: "text-base sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2 flex-wrap" },
+                      "Trạm Quản Lý, Gộp File & Nạp Dữ Liệu Kiểm Kê",
+                      React.createElement(
+                        "span",
+                        { className: "text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 normal-case" },
+                        "Màn hình chính"
+                      )
+                    ),
+                    React.createElement(
+                      "p",
+                      { className: "text-xs text-slate-500 dark:text-slate-400 mt-0.5" },
+                      "Nhập dữ liệu kiểm kê máy tính, gộp file tự động kèm Serial & Model, đối soát từ điển bản quyền và chuẩn bị báo cáo."
+                    )
                   )
                 ),
+                // Quick Badges
                 React.createElement(
-                  "p",
-                  { className: "text-[11px] text-slate-500 dark:text-slate-400" },
-                  "Quản lý tập trung các tập tin kiểm kê máy tính, cấu hình từ điển bản quyền và xuất file hợp nhất"
+                  "div",
+                  { className: "flex items-center gap-2 flex-wrap text-xs" },
+                  React.createElement(
+                    "span",
+                    {
+                      className: `catalog-status-badge ${
+                        catalogSource === 'CUSTOM_FILE' || catalogSource === 'SHEET3_EXCEL'
+                          ? 'catalog-status-custom'
+                          : catalogSource === 'REMOTE_EXCEL' || catalogSource === 'REMOTE_JSON'
+                          ? 'catalog-status-online'
+                          : 'catalog-status-fallback'
+                      }`,
+                    },
+                    React.createElement("span", { className: "w-2 h-2 rounded-full bg-emerald-500 animate-pulse" }),
+                    catalogSource === 'CUSTOM_FILE'
+                      ? 'Catalog: Tải lên riêng'
+                      : catalogSource === 'SHEET3_EXCEL'
+                      ? 'Catalog: Từ Sheet 3'
+                      : catalogSource === 'REMOTE_EXCEL'
+                      ? 'Catalog: Online GitHub'
+                      : 'Catalog: Mẫu tích hợp'
+                  ),
+                  React.createElement(
+                    "span",
+                    { className: "px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold text-slate-800 dark:text-slate-200" },
+                    loadedFiles.length,
+                    " file đã nạp • ",
+                    computers.length,
+                    " máy duy nhất"
+                  )
                 )
-              )
-            ),
-            // Right Badges
-            React.createElement(
-              "div",
-              { className: "flex items-center gap-2 text-xs flex-wrap" },
-              React.createElement(
-                "span",
-                {
-                  className: `catalog-status-badge ${
-                    catalogSource === 'CUSTOM_FILE' || catalogSource === 'SHEET3_EXCEL'
-                      ? 'catalog-status-custom'
-                      : catalogSource === 'REMOTE_EXCEL' || catalogSource === 'REMOTE_JSON'
-                      ? 'catalog-status-online'
-                      : 'catalog-status-fallback'
-                  }`,
-                },
-                React.createElement("span", { className: "w-2 h-2 rounded-full bg-emerald-500 animate-pulse" }),
-                catalogSource === 'CUSTOM_FILE'
-                  ? 'Catalog: Tải lên riêng'
-                  : catalogSource === 'SHEET3_EXCEL'
-                  ? 'Catalog: Từ Sheet 3'
-                  : catalogSource === 'REMOTE_EXCEL'
-                  ? 'Catalog: Online GitHub'
-                  : 'Catalog: Chuẩn tích hợp'
               ),
+
+              // Upload status notification banner
+              uploadStatus.message &&
+                React.createElement(
+                  "div",
+                  {
+                    className: `p-4 rounded-xl text-xs font-semibold flex items-center justify-between transition-all border shadow-xs ${
+                      uploadStatus.type === 'error'
+                        ? 'bg-rose-50 text-rose-800 dark:bg-rose-950/70 dark:text-rose-200 border-rose-200 dark:border-rose-900'
+                        : uploadStatus.type === 'success'
+                        ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-200 border-emerald-200 dark:border-emerald-900'
+                        : 'bg-blue-50 text-blue-800 dark:bg-blue-950/70 dark:text-blue-200 border-blue-200 dark:border-blue-900'
+                    }`,
+                  },
+                  React.createElement(
+                    "div",
+                    { className: "flex items-center gap-2" },
+                    React.createElement("span", { className: "text-base" }, uploadStatus.type === 'error' ? '⚠️' : uploadStatus.type === 'success' ? '✅' : 'ℹ️'),
+                    React.createElement("span", null, uploadStatus.message)
+                  ),
+                  React.createElement(
+                    "button",
+                    {
+                      onClick: () => setUploadStatus({ message: '', type: 'info' }),
+                      className: "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer ml-2 text-sm font-bold",
+                    },
+                    "✕"
+                  )
+                ),
+
+              // 4 LARGE ACTION STATIONS (Khu vực to, rõ ràng, trực quan cho người dùng)
               React.createElement(
-                "span",
-                { className: "px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold text-slate-800 dark:text-slate-200 text-xs" },
-                computers.length,
-                " máy • ",
-                installations.length,
-                " phần mềm"
+                "div",
+                { className: "grid grid-cols-1 md:grid-cols-2 gap-5" },
+
+                // STATION 1: KHU VỰC NẠP FILE & THÊM FILE
+                React.createElement(
+                  "div",
+                  { className: "sam-action-station" },
+                  React.createElement(
+                    "div",
+                    null,
+                    React.createElement(
+                      "div",
+                      { className: "flex items-center justify-between mb-2" },
+                      React.createElement(
+                        "div",
+                        { className: "flex items-center gap-2" },
+                        React.createElement("span", { className: "text-2xl" }, "📂"),
+                        React.createElement(
+                          "h3",
+                          { className: "text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-tight" },
+                          "1. Khu Vực Nạp File & Thêm File"
+                        )
+                      ),
+                      React.createElement(
+                        "span",
+                        { className: "text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300" },
+                        ".xlsx, .xls, .csv"
+                      )
+                    ),
+                    React.createElement(
+                      "p",
+                      { className: "text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4" },
+                      "Nhập dữ liệu kiểm kê máy tính và phần mềm từ các phòng ban. Chọn nạp mới từ đầu hoặc nạp thêm nhiều file để tự động gộp dữ liệu."
+                    ),
+                    // Visual Drag-and-drop / select box
+                    React.createElement(
+                      "div",
+                      {
+                        className: "border-2 border-dashed border-blue-200 dark:border-blue-900/60 bg-blue-50/40 dark:bg-blue-950/20 rounded-xl p-3 text-center mb-4 text-xs text-slate-600 dark:text-slate-400",
+                        onDragOver: (e) => e.preventDefault(),
+                        onDrop: (e) => {
+                          e.preventDefault();
+                          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                            handleInventoryUpload(e.dataTransfer.files, false);
+                          }
+                        },
+                      },
+                      "Kéo thả tập tin kiểm kê vào đây hoặc bấm nút nạp bên dưới"
+                    )
+                  ),
+                  React.createElement(
+                    "div",
+                    { className: "grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2" },
+                    React.createElement(
+                      "label",
+                      {
+                        className: "w-full py-2.5 px-3 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-bold shadow-xs transition cursor-pointer flex items-center justify-center gap-2",
+                        title: "Nhấn để nạp 1 hoặc nhiều file Excel mới (thay thế toàn bộ dữ liệu hiện tại)",
+                      },
+                      React.createElement("span", { className: "text-base" }, "📂"),
+                      React.createElement("span", null, "Nạp File Mới"),
+                      React.createElement("input", {
+                        type: "file",
+                        ref: fileInputRef,
+                        multiple: true,
+                        onChange: (e) => {
+                          if (e.target.files && e.target.files.length > 0) {
+                            handleInventoryUpload(e.target.files, false);
+                          }
+                          e.target.value = "";
+                        },
+                        accept: ".xlsx, .xls, .csv",
+                        className: "hidden",
+                      })
+                    ),
+                    React.createElement(
+                      "label",
+                      {
+                        className: "w-full py-2.5 px-3 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/70 dark:hover:bg-indigo-900/70 text-indigo-900 dark:text-indigo-200 rounded-xl text-xs font-bold transition cursor-pointer border border-indigo-200 dark:border-indigo-800 flex items-center justify-center gap-2 shadow-xs",
+                        title: "Nạp thêm các file kiểm kê từ phòng ban khác để gộp tiếp vào dữ liệu hiện có",
+                      },
+                      React.createElement("span", { className: "text-base" }, "➕"),
+                      React.createElement("span", null, "Nạp Thêm File Để Gộp"),
+                      React.createElement("input", {
+                        type: "file",
+                        ref: appendFileInputRef,
+                        multiple: true,
+                        onChange: (e) => {
+                          if (e.target.files && e.target.files.length > 0) {
+                            handleInventoryUpload(e.target.files, true);
+                          }
+                          e.target.value = "";
+                        },
+                        accept: ".xlsx, .xls, .csv",
+                        className: "hidden",
+                      })
+                    )
+                  )
+                ),
+
+                // STATION 2: KHU VỰC GỘP FILE
+                React.createElement(
+                  "div",
+                  { className: "sam-action-station" },
+                  React.createElement(
+                    "div",
+                    null,
+                    React.createElement(
+                      "div",
+                      { className: "flex items-center justify-between mb-2" },
+                      React.createElement(
+                        "div",
+                        { className: "flex items-center gap-2" },
+                        React.createElement("span", { className: "text-2xl" }, "📦"),
+                        React.createElement(
+                          "h3",
+                          { className: "text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-tight" },
+                          "2. Khu Vực Gộp File & Hợp Nhất"
+                        )
+                      ),
+                      React.createElement(
+                        "span",
+                        { className: "text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" },
+                        "1 File Duy Nhất"
+                      )
+                    ),
+                    React.createElement(
+                      "p",
+                      { className: "text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3" },
+                      "Tự động gom toàn bộ máy tính và phần mềm từ tất cả file nạp làm 1 file Excel duy nhất chuẩn 3 sheet."
+                    ),
+                    React.createElement(
+                      "div",
+                      { className: "bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 rounded-xl p-3 text-xs text-emerald-900 dark:text-emerald-300 space-y-1 mb-4" },
+                      React.createElement("div", { className: "flex items-center gap-1.5 font-bold" }, "✓ 2 cột đầu của phần mềm là Số Serial & Model máy tính"),
+                      React.createElement("div", { className: "flex items-center gap-1.5 opacity-90" }, "✓ Đã tự động khử trùng lặp thiết bị (theo Hostname & Serial)")
+                    )
+                  ),
+                  React.createElement(
+                    "div",
+                    { className: "grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2" },
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: handleExportMergedFile,
+                        className: "w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs flex items-center justify-center gap-2",
+                        title: "Gộp tất cả dữ liệu thành 1 file Excel duy nhất kèm Serial và Model",
+                      },
+                      React.createElement("span", { className: "text-base" }, "📦"),
+                      React.createElement("span", null, "Gộp & Tải 1 File Excel")
+                    ),
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: handleExportExecutive,
+                        className: "w-full py-2.5 px-3 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition cursor-pointer border border-slate-300 dark:border-slate-700 flex items-center justify-center gap-2 shadow-2xs",
+                        title: "Xuất file Excel báo cáo tổng hợp",
+                      },
+                      React.createElement("span", { className: "text-base" }, "📊"),
+                      React.createElement("span", null, "Xuất Báo Cáo (.xlsx)")
+                    )
+                  )
+                ),
+
+                // STATION 3: KHU VỰC TẢI FILE MẪU & TẢI DANH MỤC MẪU
+                React.createElement(
+                  "div",
+                  { className: "sam-action-station" },
+                  React.createElement(
+                    "div",
+                    null,
+                    React.createElement(
+                      "div",
+                      { className: "flex items-center justify-between mb-2" },
+                      React.createElement(
+                        "div",
+                        { className: "flex items-center gap-2" },
+                        React.createElement("span", { className: "text-2xl" }, "📥"),
+                        React.createElement(
+                          "h3",
+                          { className: "text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-tight" },
+                          "3. Khu Vực Tải File Mẫu, Tải Danh Mục Mẫu"
+                        )
+                      ),
+                      React.createElement(
+                        "span",
+                        { className: "text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300" },
+                        "Biểu Mẫu Chuẩn"
+                      )
+                    ),
+                    React.createElement(
+                      "p",
+                      { className: "text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4" },
+                      "Tải biểu mẫu kiểm kê mẫu để gửi các phòng ban điền dữ liệu hoặc tải danh mục mẫu chứa đầy đủ bảng giá và giải pháp FOSS."
+                    )
+                  ),
+                  React.createElement(
+                    "div",
+                    { className: "grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2" },
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: handleDownloadTemplate,
+                        className: "w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs flex items-center justify-center gap-2",
+                        title: "Tải file mẫu Excel kiểm kê chuẩn 3 sheet",
+                      },
+                      React.createElement("span", { className: "text-base" }, "📥"),
+                      React.createElement("span", null, "Tải File Mẫu Kiểm Kê")
+                    ),
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: handleExportCatalog,
+                        className: "w-full py-2.5 px-3 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition cursor-pointer border border-slate-300 dark:border-slate-700 flex items-center justify-center gap-2 shadow-2xs",
+                        title: "Tải danh mục mẫu phần mềm bản quyền (.xlsx)",
+                      },
+                      React.createElement("span", { className: "text-base" }, "📑"),
+                      React.createElement("span", null, "Tải Danh Mục Mẫu")
+                    )
+                  )
+                ),
+
+                // STATION 4: KHU VỰC KHÔI PHỤC DANH MỤC GỐC - ĐỔI THÀNH DANH MỤC MẪU
+                React.createElement(
+                  "div",
+                  { className: "sam-action-station" },
+                  React.createElement(
+                    "div",
+                    null,
+                    React.createElement(
+                      "div",
+                      { className: "flex items-center justify-between mb-2" },
+                      React.createElement(
+                        "div",
+                        { className: "flex items-center gap-2" },
+                        React.createElement("span", { className: "text-2xl" }, "🔄"),
+                        React.createElement(
+                          "h3",
+                          { className: "text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-tight" },
+                          "4. Đổi Thành Danh Mục Mẫu & Khôi Phục"
+                        )
+                      ),
+                      React.createElement(
+                        "span",
+                        { className: "text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" },
+                        `${catalogRules.length} Quy tắc`
+                      )
+                    ),
+                    React.createElement(
+                      "p",
+                      { className: "text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4" },
+                      "Đặt lại từ điển bản quyền về Danh Mục Mẫu chuẩn (Hachihi SAM Standard v2026.09) hoặc nạp file catalog riêng của doanh nghiệp."
+                    )
+                  ),
+                  React.createElement(
+                    "div",
+                    { className: "grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2" },
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: handleResetCatalog,
+                        className: "w-full py-2.5 px-3 text-amber-900 dark:text-amber-100 bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900/80 rounded-xl text-xs font-black transition cursor-pointer border border-amber-300 dark:border-amber-800 flex items-center justify-center gap-2 shadow-xs",
+                        title: "Đổi về Danh Mục Mẫu chuẩn và khôi phục danh mục gốc ban đầu",
+                      },
+                      React.createElement("span", { className: "text-base" }, "🔄"),
+                      React.createElement("span", null, "Danh Mục Mẫu (Khôi Phục Gốc)")
+                    ),
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: () => catalogInputRef.current && catalogInputRef.current.click(),
+                        className: "w-full py-2.5 px-3 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition cursor-pointer border border-slate-300 dark:border-slate-700 flex items-center justify-center gap-2 shadow-2xs",
+                        title: "Nạp file software_catalog.xlsx riêng của bạn",
+                      },
+                      React.createElement("span", { className: "text-base" }, "📁"),
+                      React.createElement("span", null, "Nạp Danh Mục Riêng")
+                    ),
+                    React.createElement("input", {
+                      type: "file",
+                      ref: catalogInputRef,
+                      onChange: (e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleCatalogUpload(e.target.files[0]);
+                        }
+                        e.target.value = "";
+                      },
+                      accept: ".xlsx, .xls",
+                      className: "hidden",
+                    })
+                  )
+                )
+              ),
+
+              // KHU VỰC KẾT QUẢ TIẾP NHẬN DỮ LIỆU (HIỆN TO RÕ BÊN DƯỚI SAU KHI GỬI FILE)
+              React.createElement(
+                "section",
+                { className: "sam-reception-box" },
+                // Header
+                React.createElement(
+                  "div",
+                  { className: "flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-blue-200/80 dark:border-blue-900/60 gap-3" },
+                  React.createElement(
+                    "div",
+                    { className: "flex items-center gap-3" },
+                    React.createElement(
+                      "div",
+                      { className: "w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-xl font-bold shadow-xs shrink-0" },
+                      "📋"
+                    ),
+                    React.createElement(
+                      "div",
+                      null,
+                      React.createElement(
+                        "h3",
+                        { className: "text-base sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight" },
+                        "Kết Quả Tiếp Nhận & Hợp Nhất Dữ Liệu Kiểm Kê"
+                      ),
+                      React.createElement(
+                        "p",
+                        { className: "text-xs text-slate-600 dark:text-slate-400" },
+                        "Thông tin tổng hợp thời gian thực sau khi đọc và hợp nhất tất cả các tập tin kiểm kê nạp vào hệ thống."
+                      )
+                    )
+                  ),
+                  React.createElement(
+                    "div",
+                    { className: "flex items-center gap-2" },
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: () => setActiveTab('OVERVIEW'),
+                        className: "px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-xs flex items-center gap-1.5",
+                      },
+                      "👉 Xem Báo Cáo Phân Tích"
+                    )
+                  )
+                ),
+
+                // 4 BIG STAT CARDS (HIỆN TO RÕ: ĐÃ NHẬN BAO NHIÊU FILE, ĐƯỢC BAO NHIÊU MÁY KHÔNG TRÙNG NHAU...)
+                React.createElement(
+                  "div",
+                  { className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" },
+
+                  // Card 1: Số file đã nhận
+                  React.createElement(
+                    "div",
+                    { className: "sam-metric-giant border-blue-200 dark:border-blue-900/70" },
+                    React.createElement(
+                      "div",
+                      { className: "flex items-center justify-between" },
+                      React.createElement("span", { className: "text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider" }, "📁 Đã Nhận"),
+                      React.createElement("span", { className: "text-lg" }, "📂")
+                    ),
+                    React.createElement(
+                      "div",
+                      { className: "text-3xl sm:text-4xl font-black text-blue-700 dark:text-blue-400 tracking-tight" },
+                      loadedFiles.length,
+                      React.createElement("span", { className: "text-sm font-bold text-slate-500 dark:text-slate-400 ml-1.5" }, "Tập tin")
+                    ),
+                    React.createElement(
+                      "p",
+                      { className: "text-[11px] text-slate-500 dark:text-slate-400" },
+                      "Tất cả tập tin kiểm kê đã nạp & phân tích"
+                    )
+                  ),
+
+                  // Card 2: Số máy tính không trùng nhau (DUY NHẤT)
+                  React.createElement(
+                    "div",
+                    { className: "sam-metric-giant border-indigo-200 dark:border-indigo-900/70 bg-gradient-to-br from-indigo-50/70 to-blue-50/40 dark:from-indigo-950/30 dark:to-blue-950/20" },
+                    React.createElement(
+                      "div",
+                      { className: "flex items-center justify-between" },
+                      React.createElement("span", { className: "text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider" }, "🖥️ Máy Tính Không Trùng"),
+                      React.createElement("span", { className: "text-lg" }, "⚡")
+                    ),
+                    React.createElement(
+                      "div",
+                      { className: "text-3xl sm:text-4xl font-black text-indigo-700 dark:text-indigo-300 tracking-tight" },
+                      computers.length,
+                      React.createElement("span", { className: "text-sm font-bold text-indigo-600 dark:text-indigo-400 ml-1.5" }, "Máy Duy Nhất")
+                    ),
+                    React.createElement(
+                      "p",
+                      { className: "text-[11px] text-indigo-950/70 dark:text-indigo-300/80 font-medium" },
+                      "Đã khử trùng lặp theo Hostname, Serial & Model"
+                    )
+                  ),
+
+                  // Card 3: Tổng lượt cài đặt phần mềm
+                  React.createElement(
+                    "div",
+                    { className: "sam-metric-giant border-emerald-200 dark:border-emerald-900/70" },
+                    React.createElement(
+                      "div",
+                      { className: "flex items-center justify-between" },
+                      React.createElement("span", { className: "text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider" }, "📦 Lượt Cài Đặt"),
+                      React.createElement("span", { className: "text-lg" }, "📑")
+                    ),
+                    React.createElement(
+                      "div",
+                      { className: "text-3xl sm:text-4xl font-black text-emerald-700 dark:text-emerald-400 tracking-tight" },
+                      installations.length,
+                      React.createElement("span", { className: "text-sm font-bold text-slate-500 dark:text-slate-400 ml-1.5" }, "Lượt cài")
+                    ),
+                    React.createElement(
+                      "p",
+                      { className: "text-[11px] text-slate-500 dark:text-slate-400" },
+                      `${softwareGroups.length} nhóm phần mềm khác nhau`
+                    )
+                  ),
+
+                  // Card 4: Tỷ lệ tuân thủ & rủi ro
+                  React.createElement(
+                    "div",
+                    { className: "sam-metric-giant border-amber-200 dark:border-amber-900/70" },
+                    React.createElement(
+                      "div",
+                      { className: "flex items-center justify-between" },
+                      React.createElement("span", { className: "text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider" }, "⚖️ Điểm Tuân Thủ"),
+                      React.createElement("span", { className: "text-lg" }, "🛡️")
+                    ),
+                    React.createElement(
+                      "div",
+                      { className: "text-3xl sm:text-4xl font-black text-amber-700 dark:text-amber-400 tracking-tight" },
+                      metrics.complianceScore,
+                      React.createElement("span", { className: "text-sm font-bold text-slate-500 dark:text-slate-400 ml-1.5" }, "%")
+                    ),
+                    React.createElement(
+                      "p",
+                      { className: "text-[11px] text-slate-500 dark:text-slate-400" },
+                      `${metrics.missingInvoiceCount} phần mềm cần đối soát / rủi ro`
+                    )
+                  )
+                ),
+
+                // CHI TIẾT CÁC TẬP TIN ĐÃ NHẬN
+                loadedFiles.length > 0 &&
+                  React.createElement(
+                    "div",
+                    { className: "bg-white/80 dark:bg-slate-900/80 rounded-xl p-4 border border-blue-200/70 dark:border-blue-900/50 space-y-3" },
+                    React.createElement(
+                      "div",
+                      { className: "flex items-center justify-between" },
+                      React.createElement(
+                        "h4",
+                        { className: "text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5" },
+                        React.createElement("span", null, "📁"),
+                        "Danh Sách ",
+                        loadedFiles.length,
+                        " Tập Tin Đã Nạp:"
+                      ),
+                      React.createElement(
+                        "button",
+                        {
+                          onClick: handleExportMergedFile,
+                          className: "text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1",
+                        },
+                        "⬇️ Tải 1 file Excel hợp nhất ngay"
+                      )
+                    ),
+                    React.createElement(
+                      "div",
+                      { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" },
+                      loadedFiles.map((file, idx) =>
+                        React.createElement(
+                          "div",
+                          {
+                            key: idx,
+                            className: "p-3 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 flex items-start gap-3",
+                          },
+                          React.createElement("span", { className: "text-2xl mt-0.5" }, "📄"),
+                          React.createElement(
+                            "div",
+                            { className: "min-w-0 flex-1 text-xs" },
+                            React.createElement("p", { className: "font-bold text-slate-900 dark:text-white truncate", title: file.name }, file.name),
+                            React.createElement(
+                              "div",
+                              { className: "flex items-center gap-2 mt-1 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap" },
+                              file.size ? React.createElement("span", null, `${(file.size / 1024).toFixed(1)} KB`) : null,
+                              React.createElement("span", { className: "font-bold text-blue-600 dark:text-blue-400" }, `${file.computersCount || 0} máy`),
+                              React.createElement("span", { className: "font-bold text-emerald-600 dark:text-emerald-400" }, `${file.installationsCount || 0} phần mềm`)
+                            )
+                          )
+                        )
+                      )
+                    )
+                  ),
+
+                // BẢNG TÓM TẮT CÁC MÁY TÍNH KHÔNG TRÙNG NHAU (UNIQUE COMPUTERS PREVIEW)
+                computers.length > 0 &&
+                  React.createElement(
+                    "div",
+                    { className: "bg-white/80 dark:bg-slate-900/80 rounded-xl p-4 border border-blue-200/70 dark:border-blue-900/50 space-y-3" },
+                    React.createElement(
+                      "div",
+                      { className: "flex items-center justify-between flex-wrap gap-2" },
+                      React.createElement(
+                        "h4",
+                        { className: "text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5" },
+                        React.createElement("span", null, "🖥️"),
+                        "Danh Sách ",
+                        computers.length,
+                        " Máy Tính Duy Nhất (Đã Khử Trùng):"
+                      ),
+                      React.createElement(
+                        "button",
+                        {
+                          onClick: () => setActiveTab('MACHINE_AUDIT'),
+                          className: "text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer",
+                        },
+                        "Xem toàn bộ kiểm toán từng máy →"
+                      )
+                    ),
+                    React.createElement(
+                      "div",
+                      { className: "overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800" },
+                      React.createElement(
+                        "table",
+                        { className: "min-w-full text-left text-xs divide-y divide-slate-200 dark:divide-slate-800" },
+                        React.createElement(
+                          "thead",
+                          { className: "bg-slate-50 dark:bg-slate-800/80 font-bold text-slate-700 dark:text-slate-300" },
+                          React.createElement(
+                            "tr",
+                            null,
+                            React.createElement("th", { className: "px-3 py-2" }, "Hostname"),
+                            React.createElement("th", { className: "px-3 py-2" }, "Người Dùng"),
+                            React.createElement("th", { className: "px-3 py-2" }, "Phòng Ban"),
+                            React.createElement("th", { className: "px-3 py-2" }, "Số Serial / Service Tag"),
+                            React.createElement("th", { className: "px-3 py-2" }, "Model Phần Cứng"),
+                            React.createElement("th", { className: "px-3 py-2 text-center" }, "Số Phần Mềm")
+                          )
+                        ),
+                        React.createElement(
+                          "tbody",
+                          { className: "divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" },
+                          computers.slice(0, 8).map((comp, i) => {
+                            const instCount = installations.filter(inst => (inst.hostname || '').toUpperCase() === (comp.hostname || '').toUpperCase()).length;
+                            return React.createElement(
+                              "tr",
+                              { key: i, className: "hover:bg-blue-50/40 dark:hover:bg-blue-950/30 transition-colors" },
+                              React.createElement("td", { className: "px-3 py-2 font-bold text-blue-700 dark:text-blue-300" }, comp.hostname || 'N/A'),
+                              React.createElement("td", { className: "px-3 py-2" }, comp.user || 'N/A'),
+                              React.createElement("td", { className: "px-3 py-2" }, comp.department || 'N/A'),
+                              React.createElement("td", { className: "px-3 py-2 font-mono text-[11px]" }, comp.serial || 'N/A'),
+                              React.createElement("td", { className: "px-3 py-2" }, comp.model || 'N/A'),
+                              React.createElement(
+                                "td",
+                                { className: "px-3 py-2 text-center" },
+                                React.createElement(
+                                  "span",
+                                  { className: "px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 font-bold text-[11px]" },
+                                  instCount
+                                )
+                              )
+                            );
+                          })
+                        )
+                      )
+                    ),
+                    computers.length > 8 &&
+                      React.createElement(
+                        "p",
+                        { className: "text-[11px] text-slate-500 dark:text-slate-400 text-center italic" },
+                        `Đang hiển thị 8 / ${computers.length} máy tính. Vào menu "Các Cài Đặt Nâng Cao" > "3. Kiểm Toán Từng Máy" để xem toàn bộ.`
+                      )
+                  ),
+
+                // QUICK JUMP ACTION BAR
+                React.createElement(
+                  "div",
+                  { className: "flex items-center justify-between flex-wrap gap-3 pt-2" },
+                  React.createElement(
+                    "div",
+                    { className: "flex items-center gap-2 flex-wrap" },
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: () => setActiveTab('OVERVIEW'),
+                        className: "px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs flex items-center gap-1.5",
+                      },
+                      "📊 1. Báo Cáo Tổng Quan"
+                    ),
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: () => setActiveTab('SOFTWARE_MATRIX'),
+                        className: "px-4 py-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold transition cursor-pointer shadow-2xs flex items-center gap-1.5",
+                      },
+                      "📑 2. Ma Trận Phần Mềm"
+                    ),
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: () => setActiveTab('MACHINE_AUDIT'),
+                        className: "px-4 py-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold transition cursor-pointer shadow-2xs flex items-center gap-1.5",
+                      },
+                      "💻 3. Kiểm Toán Từng Máy"
+                    )
+                  ),
+                  React.createElement(
+                    "div",
+                    { className: "flex items-center gap-2" },
+                    React.createElement(
+                      "button",
+                      {
+                        onClick: () => setShowPrintReportModal(true),
+                        className: "px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-bold transition cursor-pointer shadow-xs flex items-center gap-1.5",
+                      },
+                      "🖨️ In Báo Cáo (BGĐ)"
+                    )
+                  )
+                )
               )
             )
-          ),
-
-          // Main 3-Column Functional Station
-          React.createElement(
-            "div",
-            { className: "p-4 sm:p-5 grid grid-cols-1 md:grid-cols-3 gap-4" },
-
-            // Column 1: Nạp Dữ Liệu Máy Tính & Phần Mềm
+          : // WHEN IN REPORT MODE: Show sub-navigation and active report component
             React.createElement(
               "div",
-              { className: "bg-slate-50/90 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between space-y-3" },
-              React.createElement(
-                "div",
-                null,
-                React.createElement(
-                  "div",
-                  { className: "flex items-center gap-2 mb-1" },
-                  React.createElement("span", { className: "w-2.5 h-2.5 rounded-full bg-blue-600" }),
-                  React.createElement("h3", { className: "text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight" }, "1. Dữ Liệu Kiểm Kê")
-                ),
-                React.createElement("p", { className: "text-[11px] text-slate-500 dark:text-slate-400" }, "Nạp 1 hoặc nhiều file Excel/CSV kiểm kê từ các máy tính.")
-              ),
-              React.createElement(
-                "div",
-                { className: "flex flex-col gap-2" },
-                React.createElement(
-                  "label",
-                  {
-                    className: "w-full py-2 px-3 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded-lg text-xs font-bold shadow-xs transition cursor-pointer flex items-center justify-center gap-1.5",
-                    title: "Nhấn để nạp 1 hoặc nhiều file Excel/CSV mới",
-                  },
-                  "📂 Nạp File Kiểm Kê (Mới)",
-                  React.createElement("input", {
-                    type: "file",
-                    ref: fileInputRef,
-                    multiple: true,
-                    onChange: (e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        handleInventoryUpload(e.target.files, false);
-                      }
-                      e.target.value = "";
-                    },
-                    accept: ".xlsx, .xls, .csv",
-                    className: "hidden",
-                  })
-                ),
-                React.createElement(
-                  "label",
-                  {
-                    className: "w-full py-2 px-3 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-900 dark:text-indigo-200 rounded-lg text-xs font-semibold transition cursor-pointer border border-indigo-200 dark:border-indigo-800 flex items-center justify-center gap-1.5",
-                    title: "Nạp thêm các file kiểm kê khác để gộp tiếp",
-                  },
-                  "➕ Nạp Thêm File Để Gộp",
-                  React.createElement("input", {
-                    type: "file",
-                    multiple: true,
-                    onChange: (e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        handleInventoryUpload(e.target.files, true);
-                      }
-                      e.target.value = "";
-                    },
-                    accept: ".xlsx, .xls, .csv",
-                    className: "hidden",
-                  })
-                )
-              )
-            ),
+              { className: "space-y-6" },
 
-            // Column 2: Danh Mục & Quy Tắc Bản Quyền (Catalog)
-            React.createElement(
-              "div",
-              { className: "bg-slate-50/90 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between space-y-3" },
+              // Top Breadcrumb & Report Navigation Bar
               React.createElement(
                 "div",
-                null,
-                React.createElement(
-                  "div",
-                  { className: "flex items-center gap-2 mb-1" },
-                  React.createElement("span", { className: "w-2.5 h-2.5 rounded-full bg-amber-500" }),
-                  React.createElement("h3", { className: "text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight" }, "2. Từ Điển Bản Quyền (Catalog)")
-                ),
-                React.createElement(
-                  "p",
-                  { className: "text-[11px] text-slate-500 dark:text-slate-400" },
-                  `Đang áp dụng ${catalogRules.length} quy tắc nhận diện, đơn giá và phương án FOSS.`
-                )
-              ),
-              React.createElement(
-                "div",
-                { className: "flex flex-col gap-2" },
+                { className: "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 print:hidden" },
+                // Back to home button
                 React.createElement(
                   "button",
                   {
-                    onClick: () => catalogInputRef.current && catalogInputRef.current.click(),
-                    className: "w-full py-2 px-3 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-bold transition cursor-pointer border border-slate-300 dark:border-slate-700 flex items-center justify-center gap-1.5 shadow-2xs",
-                    title: "Nạp file software_catalog.xlsx riêng của doanh nghiệp",
+                    onClick: () => setActiveTab('HOME'),
+                    className: "px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-2 border border-slate-200 dark:border-slate-700 shrink-0",
+                    title: "Quay về Bảng Nạp & Gộp File Kiểm Kê (Màn hình chính)",
                   },
-                  "📁 Nạp Danh Mục Riêng (.xlsx)"
+                  React.createElement("span", { className: "text-base" }, "←"),
+                  "Quay Lại Bảng Xử Lý File"
                 ),
-                React.createElement("input", {
-                  type: "file",
-                  ref: catalogInputRef,
-                  onChange: (e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      handleCatalogUpload(e.target.files[0]);
-                    }
-                    e.target.value = "";
-                  },
-                  accept: ".xlsx, .xls",
-                  className: "hidden",
+                // 5 Tab pills
+                React.createElement(
+                  "nav",
+                  { className: "sam-segmented-nav shadow-none border-0 p-1 flex-1 overflow-x-auto", "aria-label": "Danh mục phân hệ báo cáo" },
+                  [
+                    { id: 'OVERVIEW', icon: '📊', label: '1. Báo Cáo Tổng Quan', badge: `${metrics.complianceScore}%` },
+                    { id: 'SOFTWARE_MATRIX', icon: '📑', label: '2. Ma Trận Phần Mềm', badge: `${softwareGroups.length}` },
+                    { id: 'MACHINE_AUDIT', icon: '💻', label: '3. Kiểm Toán Từng Máy', badge: `${computers.length}` },
+                    { id: 'FOSS_PLAN', icon: '💡', label: '4. Kế Hoạch FOSS (0đ)', badge: `${metrics.replaceFoss}` },
+                    { id: 'CATALOG_CONFIG', icon: '⚙️', label: '5. Quy Định Cài Đặt', badge: `${catalogRules.length}` },
+                  ].map((tab) =>
+                    React.createElement(
+                      "button",
+                      {
+                        key: tab.id,
+                        onClick: () => setActiveTab(tab.id),
+                        className: `sam-tab-btn ${activeTab === tab.id ? 'active' : ''}`,
+                      },
+                      React.createElement("span", { className: "text-sm" }, tab.icon),
+                      React.createElement("span", null, tab.label),
+                      React.createElement(
+                        "span",
+                        {
+                          className: `text-[10px] px-2 py-0.5 rounded-full font-bold transition-colors ${
+                            activeTab === tab.id
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200'
+                              : 'bg-slate-200/90 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                          }`,
+                        },
+                        tab.badge
+                      )
+                    )
+                  )
+                )
+              ),
+
+              // Active Report Component Rendering
+              activeTab === 'OVERVIEW' &&
+                React.createElement(REPORTS.OverviewReport, {
+                  metrics,
+                  kpiBreakdown,
+                  installations,
+                  executivePlanRows,
+                  totalBudgetRequired,
+                  setActiveTab,
+                  setShowPrintReportModal,
+                  formatVND: UTILS.formatVND || ((v) => `${v} ₫`),
                 }),
-                catalogSource !== 'DEFAULT_EMBEDDED' ?
-                  React.createElement(
-                    "button",
-                    {
-                      onClick: handleResetCatalog,
-                      className: "w-full py-2 px-3 text-rose-700 dark:text-rose-300 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 rounded-lg text-xs font-bold transition cursor-pointer border border-rose-200 dark:border-rose-900 flex items-center justify-center gap-1.5",
-                      title: "Khôi phục danh mục chuẩn tích hợp sẵn của Hachihi SAM",
-                    },
-                    "🔄 Khôi Phục Danh Mục Gốc"
-                  )
-                  :
-                  React.createElement(
-                    "button",
-                    {
-                      onClick: () => setActiveTab("CATALOG_CONFIG"),
-                      className: "w-full py-2 px-3 text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-1.5",
-                    },
-                    "⚙️ Xem & Tùy Biến Quy Tắc"
-                  )
-              )
-            ),
 
-            // Column 3: Hợp Nhất Dữ Liệu & Xuất File
-            React.createElement(
-              "div",
-              { className: "bg-slate-50/90 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200/90 dark:border-slate-800 flex flex-col justify-between space-y-3" },
-              React.createElement(
-                "div",
-                null,
-                React.createElement(
-                  "div",
-                  { className: "flex items-center gap-2 mb-1" },
-                  React.createElement("span", { className: "w-2.5 h-2.5 rounded-full bg-emerald-500" }),
-                  React.createElement("h3", { className: "text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight" }, "3. Hợp Nhất & File Mẫu")
-                ),
-                React.createElement("p", { className: "text-[11px] text-slate-500 dark:text-slate-400" }, "Gộp tất cả dữ liệu thành 1 file chuẩn có Serial/Model hoặc tải mẫu kiểm kê.")
-              ),
-              React.createElement(
-                "div",
-                { className: "flex flex-col gap-2" },
-                React.createElement(
-                  "button",
-                  {
-                    onClick: handleExportMergedFile,
-                    className: "w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-xs flex items-center justify-center gap-1.5",
-                    title: "Gộp dữ liệu tất cả máy tính và phần mềm thành 1 file Excel (2 cột đầu là Serial và Model)",
-                  },
-                  "📦 Gộp Làm 1 & Tải Excel"
-                ),
-                React.createElement(
-                  "button",
-                  {
-                    onClick: handleDownloadTemplate,
-                    className: "w-full py-2 px-3 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-semibold transition cursor-pointer border border-slate-300 dark:border-slate-700 flex items-center justify-center gap-1.5 shadow-2xs",
-                    title: "Tải file mẫu Excel kiểm kê chuẩn 3 sheet",
-                  },
-                  "📥 Tải File Mẫu Kiểm Kê"
-                )
-              )
+              activeTab === 'SOFTWARE_MATRIX' &&
+                React.createElement(REPORTS.SoftwareMatrixReport, {
+                  softwareGroups,
+                  searchTerm,
+                  setSearchTerm,
+                  filterRisk,
+                  setFilterRisk,
+                  formatVND: UTILS.formatVND || ((v) => `${v} ₫`),
+                }),
+
+              activeTab === 'MACHINE_AUDIT' &&
+                React.createElement(REPORTS.MachineAuditReport, {
+                  computers,
+                  installations,
+                  updateInvoiceStatus,
+                }),
+
+              activeTab === 'FOSS_PLAN' &&
+                React.createElement(REPORTS.FossPlanReport, {
+                  metrics,
+                  formatVND: UTILS.formatVND || ((v) => `${v} ₫`),
+                }),
+
+              activeTab === 'CATALOG_CONFIG' &&
+                React.createElement(REPORTS.CatalogConfigReport, {
+                  catalogRules,
+                  catalogSource,
+                  catalogInfo,
+                  onAddRule: handleAddRule,
+                  onUpdateRule: handleUpdateRule,
+                  onAssignFree: handleAssignFree,
+                  onDeleteRule: handleDeleteRule,
+                  onResetCatalog: handleResetCatalog,
+                  onUploadCatalogFile: handleCatalogUpload,
+                  onExportCatalog: handleExportCatalog,
+                  onExportCatalogJSON: handleExportCatalogJSON,
+                  onDownloadTemplate: handleDownloadTemplate,
+                  formatVND: UTILS.formatVND || ((v) => `${v} ₫`),
+                })
             )
-          ),
-
-          // File Summary Shelf (If files were loaded)
-          loadedFiles.length > 0 &&
-            React.createElement(
-              "div",
-              { className: "bg-slate-100/70 dark:bg-slate-950/70 border-t border-slate-200 dark:border-slate-800 px-4 sm:px-5 py-3 flex items-center justify-between flex-wrap gap-2 text-xs" },
-              React.createElement(
-                "div",
-                { className: "flex items-center gap-2 flex-wrap" },
-                React.createElement(
-                  "span",
-                  { className: "font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5" },
-                  "📚 Đã nạp " + loadedFiles.length + " tập tin kiểm kê:"
-                ),
-                loadedFiles.map((f, i) =>
-                  React.createElement(
-                    "span",
-                    {
-                      key: i,
-                      className: "px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-semibold border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 shadow-2xs",
-                      title: `${f.name} (${f.computersCount || 0} máy, ${f.installationsCount || 0} phần mềm)`
-                    },
-                    "📄 " + f.name,
-                    React.createElement("span", { className: "text-[11px] text-blue-600 dark:text-blue-400 font-bold" }, `• ${f.computersCount || 0} máy`),
-                    React.createElement("span", { className: "text-[11px] text-emerald-600 dark:text-emerald-400 font-bold" }, `• ${f.installationsCount || 0} pm`)
-                  )
-                )
-              ),
-              React.createElement(
-                "button",
-                {
-                  onClick: handleExportMergedFile,
-                  className: "text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline cursor-pointer flex items-center gap-1 py-1",
-                  title: "Xuất ngay 1 file Excel tổng hợp có 2 cột đầu của phần mềm là Serial & Model",
-                },
-                "⬇️ Tải File Hợp Nhất (Đã kèm Serial & Model)"
-              )
-            ),
-
-          // Upload Message / Progress Feedback
-          uploadStatus.message &&
-            React.createElement(
-              "div",
-              {
-                className: `mx-4 sm:mx-5 mb-4 px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
-                  uploadStatus.type === 'error'
-                    ? 'bg-rose-50 text-rose-800 dark:bg-rose-950 dark:text-rose-200 border border-rose-200 dark:border-rose-900'
-                    : uploadStatus.type === 'success'
-                    ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-900'
-                    : 'bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-200 border border-blue-200 dark:border-blue-900'
-                }`,
-              },
-              React.createElement("span", null, uploadStatus.message),
-              React.createElement(
-                "button",
-                {
-                  onClick: () => setUploadStatus({ message: '', type: 'info' }),
-                  className: "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer ml-2 text-sm",
-                },
-                "✕"
-              )
-            )
-        ),
-
-        // Section B: Elevated Segmented Navigation Tabs (Thanh Điều Hướng 5 Phân Hệ Báo Cáo)
-        React.createElement(
-          "nav",
-          { className: "sam-segmented-nav print:hidden shadow-xs", "aria-label": "Danh mục phân hệ báo cáo" },
-          [
-            { id: 'OVERVIEW', icon: '📊', label: '1. Báo Cáo Tổng Quan', badge: `${metrics.complianceScore}% Tuân thủ` },
-            { id: 'SOFTWARE_MATRIX', icon: '📑', label: '2. Ma Trận Phần Mềm', badge: `${softwareGroups.length} nhóm PM` },
-            { id: 'MACHINE_AUDIT', icon: '💻', label: '3. Kiểm Toán Từng Máy', badge: `${computers.length} thiết bị` },
-            { id: 'FOSS_PLAN', icon: '💡', label: '4. Kế Hoạch FOSS (0đ)', badge: `${metrics.replaceFoss} vị trí thay` },
-            { id: 'CATALOG_CONFIG', icon: '⚙️', label: '5. Quy Định & Catalog', badge: `${catalogRules.length} quy tắc` },
-          ].map((tab) =>
-            React.createElement(
-              "button",
-              {
-                key: tab.id,
-                onClick: () => setActiveTab(tab.id),
-                className: `sam-tab-btn ${activeTab === tab.id ? 'active' : ''}`,
-              },
-              React.createElement("span", { className: "text-sm" }, tab.icon),
-              React.createElement("span", null, tab.label),
-              React.createElement(
-                "span",
-                {
-                  className: `text-[10px] px-2 py-0.5 rounded-full font-bold transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200'
-                      : 'bg-slate-200/90 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
-                  }`,
-                },
-                tab.badge
-              )
-            )
-          )
-        ),
-
-        // Section C: Tab Content Rendering Area
-
-        activeTab === 'OVERVIEW' &&
-          React.createElement(REPORTS.OverviewReport, {
-            metrics,
-            kpiBreakdown,
-            installations,
-            executivePlanRows,
-            totalBudgetRequired,
-            setActiveTab,
-            setShowPrintReportModal,
-            formatVND: UTILS.formatVND || ((v) => `${v} ₫`),
-          }),
-
-        activeTab === 'SOFTWARE_MATRIX' &&
-          React.createElement(REPORTS.SoftwareMatrixReport, {
-            softwareGroups,
-            searchTerm,
-            setSearchTerm,
-            filterRisk,
-            setFilterRisk,
-            formatVND: UTILS.formatVND || ((v) => `${v} ₫`),
-          }),
-
-        activeTab === 'MACHINE_AUDIT' &&
-          React.createElement(REPORTS.MachineAuditReport, {
-            computers,
-            installations,
-            updateInvoiceStatus,
-          }),
-
-        activeTab === 'FOSS_PLAN' &&
-          React.createElement(REPORTS.FossPlanReport, {
-            metrics,
-            formatVND: UTILS.formatVND || ((v) => `${v} ₫`),
-          }),
-
-        activeTab === 'CATALOG_CONFIG' &&
-          React.createElement(REPORTS.CatalogConfigReport, {
-            catalogRules,
-            catalogSource,
-            catalogInfo,
-            onAddRule: handleAddRule,
-            onUpdateRule: handleUpdateRule,
-            onAssignFree: handleAssignFree,
-            onDeleteRule: handleDeleteRule,
-            onResetCatalog: handleResetCatalog,
-            onUploadCatalogFile: handleCatalogUpload,
-            onExportCatalog: handleExportCatalog,
-            onExportCatalogJSON: handleExportCatalogJSON,
-            onDownloadTemplate: handleDownloadTemplate,
-            formatVND: UTILS.formatVND || ((v) => `${v} ₫`),
-          })
       ),
 
       // Footer
