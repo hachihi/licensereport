@@ -7,35 +7,98 @@
   background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #172554 100%);
 }
 
-/* Large Action Stations on Main Screen */
+/* Large Action Stations on Main Screen with Generous Spacing and Distinct Color Accents */
 .sam-action-station {
   background-color: #ffffff;
   border: 1px solid #cbd5e1;
   border-radius: 1.25rem;
-  padding: 1.5rem;
+  padding: 1.75rem 2rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 2px 5px 0 rgba(15, 23, 42, 0.05);
-  transition: all 0.2s ease-in-out;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
+  transition: all 0.25s ease-in-out;
   position: relative;
+  overflow: hidden;
 }
 
 .sam-action-station:hover {
   border-color: #94a3b8;
-  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.1);
-  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.12);
+  transform: translateY(-3px);
 }
 
 .dark .sam-action-station {
   background-color: #0f172a;
   border-color: #334155;
-  box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.35);
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.4);
 }
 
 .dark .sam-action-station:hover {
   border-color: #475569;
-  box-shadow: 0 8px 25px -4px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 14px 32px -4px rgba(0, 0, 0, 0.65);
+}
+
+/* 4 Distinct Thematic Variations for Instant Recognition */
+.sam-station-upload {
+  border-top: 5px solid #2563eb;
+}
+.sam-station-upload:hover {
+  border-color: #3b82f6;
+  border-top-color: #1d4ed8;
+}
+
+.sam-station-merge {
+  border-top: 5px solid #059669;
+}
+.sam-station-merge:hover {
+  border-color: #10b981;
+  border-top-color: #047857;
+}
+
+.sam-station-templates {
+  border-top: 5px solid #7c3aed;
+}
+.sam-station-templates:hover {
+  border-color: #8b5cf6;
+  border-top-color: #6d28d9;
+}
+
+.sam-station-catalog {
+  border-top: 5px solid #d97706;
+}
+.sam-station-catalog:hover {
+  border-color: #f59e0b;
+  border-top-color: #b45309;
+}
+
+/* Big Metric Cards inside Reception Box */
+.sam-metric-giant {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 1.125rem;
+  padding: 1.5rem 1.625rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.875rem;
+  box-shadow: 0 2px 6px -1px rgba(15, 23, 42, 0.05);
+  transition: all 0.2s ease;
+}
+
+.sam-metric-giant:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px -2px rgba(15, 23, 42, 0.08);
+}
+
+.dark .sam-metric-giant {
+  background-color: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.3);
+}
+
+.dark .sam-metric-giant:hover {
+  box-shadow: 0 8px 20px -2px rgba(0, 0, 0, 0.5);
 }
 
 /* Dropdown Menu for Advanced Settings */
@@ -111,18 +174,20 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Reception Result Big Box */
+/* Reception Result Big Box - Spacious and Highly Distinct */
 .sam-reception-box {
   background: linear-gradient(to bottom right, #ffffff, #f8fafc);
-  border: 2px solid #93c5fd;
-  border-radius: 1.25rem;
-  box-shadow: 0 4px 20px -2px rgba(37, 99, 235, 0.12);
+  border: 1px solid #bfdbfe;
+  border-top: 6px solid #2563eb;
+  border-radius: 1.5rem;
+  box-shadow: 0 10px 30px -4px rgba(37, 99, 235, 0.1), 0 4px 12px -2px rgba(15, 23, 42, 0.05);
 }
 
 .dark .sam-reception-box {
   background: linear-gradient(to bottom right, #0f172a, #1e293b);
-  border-color: #1e40af;
-  box-shadow: 0 6px 24px -2px rgba(0, 0, 0, 0.5);
+  border-color: #1e3a8a;
+  border-top-color: #3b82f6;
+  box-shadow: 0 14px 35px -4px rgba(0, 0, 0, 0.6);
 }
 
 /* Distinct Section Cards */
