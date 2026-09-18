@@ -245,16 +245,34 @@
         let finalLoadedFiles = result.files || [];
 
         if (appendMode && computers.length > 0) {
-          // Merge with existing computers (deduplicating by hostname)
+          // Merge with existing computers (deduplicating by serial first, then hostname)
           const compMap = new Map();
-          computers.forEach((c) => compMap.set((c.hostname || '').toUpperCase(), { ...c }));
+          const serialMap = new Map();
+          computers.forEach((c) => {
+            const h = (c.hostname || '').toUpperCase();
+            const s = (c.serial && c.serial !== 'N/A' && c.serial.trim() !== '') ? c.serial.trim().toUpperCase() : null;
+            const copy = { ...c };
+            if (h) compMap.set(h, copy);
+            if (s) serialMap.set(s, copy);
+          });
+
           (result.computers || []).forEach((c) => {
             const hostKey = (c.hostname || '').toUpperCase();
-            if (!compMap.has(hostKey)) {
-              compMap.set(hostKey, c);
+            const serialKey = (c.serial && c.serial !== 'N/A' && c.serial.trim() !== '') ? c.serial.trim().toUpperCase() : null;
+
+            let existing = null;
+            if (serialKey && serialMap.has(serialKey)) {
+              existing = serialMap.get(serialKey);
+            } else if (hostKey && compMap.has(hostKey)) {
+              existing = compMap.get(hostKey);
+            }
+
+            if (!existing) {
+              const compCopy = { ...c };
+              if (hostKey) compMap.set(hostKey, compCopy);
+              if (serialKey) serialMap.set(serialKey, compCopy);
             } else {
-              const existing = compMap.get(hostKey);
-              ['user', 'department', 'os', 'model', 'serial', 'manufacturer', 'cpu', 'ram', 'disk'].forEach((field) => {
+              ['user', 'department', 'os', 'model', 'serial', 'manufacturer', 'cpu', 'ram', 'disk', 'vga'].forEach((field) => {
                 if ((!existing[field] || existing[field] === 'N/A' || existing[field] === 'Chưa gán') && c[field] && c[field] !== 'N/A' && c[field] !== 'Chưa gán') {
                   existing[field] = c[field];
                 }
@@ -262,9 +280,11 @@
               if (c.sourceFile && existing.sourceFile && !existing.sourceFile.includes(c.sourceFile)) {
                 existing.sourceFile += ', ' + c.sourceFile;
               }
+              if (hostKey && !compMap.has(hostKey)) compMap.set(hostKey, existing);
+              if (serialKey && !serialMap.has(serialKey)) serialMap.set(serialKey, existing);
             }
           });
-          finalComputers = Array.from(compMap.values());
+          finalComputers = Array.from(new Set(compMap.values()));
           finalRaw = [...rawInventory, ...(result.installations || [])];
           finalLoadedFiles = [...loadedFiles, ...(result.files || [])];
         }
@@ -751,6 +771,7 @@
               onUploadFiles: (files) => handleInventoryUpload(files, false),
               onAppendFiles: (files) => handleInventoryUpload(files, true),
               onDownloadTemplate: handleDownloadTemplate,
+              onExportMergedFile: handleExportMergedFile,
               setActiveTab,
               setActionFilter,
               fileInputRef,

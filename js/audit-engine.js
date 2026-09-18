@@ -271,39 +271,61 @@
    */
   function generateMachineOverviewRows(computers, installations) {
     const compMap = new Map();
+    const serialMap = new Map();
 
     (computers || []).forEach((c, idx) => {
       const host = String(c.hostname || c.id || `PC_${idx + 1}`).trim();
-      const norm = host.toUpperCase();
-      compMap.set(norm, {
+      const normHost = host.toUpperCase();
+      const serial = String(c.serialNumber || c.serial || "N/A").trim();
+      const normSerial = serial.toUpperCase();
+
+      const machineObj = {
         stt: idx + 1,
         hostname: host,
         model: c.model || c.systemType || "N/A",
         user: c.assignedUser || c.user || c.userName || "Chưa gán",
         department: c.department || "Chưa xác định",
-        serial: c.serialNumber || c.serial || "N/A",
+        serial: serial,
         softwareCount: 0,
         hasWarning: false,
-      });
+      };
+
+      compMap.set(normHost, machineObj);
+      if (serial !== "N/A" && serial !== "") {
+        serialMap.set(normSerial, machineObj);
+      }
     });
 
     (installations || []).forEach((inst) => {
       const host = String(inst.computerHostname || "Unknown_PC").trim();
-      const norm = host.toUpperCase();
-      if (!compMap.has(norm)) {
-        compMap.set(norm, {
-          stt: compMap.size + 1,
-          hostname: host,
-          model: "N/A",
-          user: inst.userName || "Chưa gán",
-          department: inst.department || "Chưa xác định",
-          serial: "N/A",
-          softwareCount: 0,
-          hasWarning: false,
-        });
+      const normHost = host.toUpperCase();
+      const serial = String(inst.computerSerial || inst.serial || "N/A").trim();
+      const normSerial = serial.toUpperCase();
+
+      let machine = null;
+      if (serial !== "N/A" && serial !== "" && serialMap.has(normSerial)) {
+        machine = serialMap.get(normSerial);
+      } else if (compMap.has(normHost)) {
+        machine = compMap.get(normHost);
       }
 
-      const machine = compMap.get(norm);
+      if (!machine) {
+        machine = {
+          stt: compMap.size + 1,
+          hostname: host,
+          model: inst.computerModel || "N/A",
+          user: inst.userName || "Chưa gán",
+          department: inst.department || "Chưa xác định",
+          serial: serial,
+          softwareCount: 0,
+          hasWarning: false,
+        };
+        compMap.set(normHost, machine);
+        if (serial !== "N/A" && serial !== "") {
+          serialMap.set(normSerial, machine);
+        }
+      }
+
       machine.softwareCount++;
 
       const isRisky =
@@ -318,7 +340,12 @@
       }
     });
 
-    return Array.from(compMap.values());
+    // Trả về danh sách máy tính duy nhất (không lặp)
+    const uniqueMachines = Array.from(new Set(compMap.values()));
+    return uniqueMachines.map((m, idx) => ({
+      ...m,
+      stt: idx + 1,
+    }));
   }
 
   function processInstallations(installations, catalogList) {

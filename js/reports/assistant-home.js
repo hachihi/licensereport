@@ -11,6 +11,7 @@
       onUploadFiles,
       onAppendFiles,
       onDownloadTemplate,
+      onExportMergedFile,
       setActiveTab,
       setActionFilter,
       fileInputRef,
@@ -302,7 +303,22 @@
               accept: ".xlsx, .xls, .csv",
               className: "hidden",
             })
-          )
+          ),
+
+          // Nút 4: Tải file Excel đã gộp (Chuẩn Hachihi.vn: 1. Danh sach may tinh + 2. Phan mem)
+          onExportMergedFile &&
+            React.createElement(
+              "button",
+              {
+                id: "btn-home-download-merged",
+                type: "button",
+                onClick: onExportMergedFile,
+                className: "px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white rounded-xl text-sm font-bold transition flex items-center gap-2 cursor-pointer shadow-xs",
+                title: "Tải file Excel đã gộp dữ liệu từ tất cả các máy (1. Danh sach may tinh & 2. Phan mem)",
+              },
+              React.createElement("span", { className: "text-base" }, "📊"),
+              React.createElement("span", null, "Tải file Excel đã gộp")
+            )
         )
       ),
 

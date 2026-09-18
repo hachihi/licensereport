@@ -28,10 +28,15 @@
     // Phân tích trạng thái từng máy tính
     const enrichedComputers = React.useMemo(() => {
       return (computers || []).map((c) => {
-        const hostUpper = (c.hostname || '').toUpperCase();
-        const compInstalls = (installations || []).filter(
-          (i) => (i.computerHostname || '').toUpperCase() === hostUpper
-        );
+        const hostUpper = (c.hostname || '').trim().toUpperCase();
+        const serialUpper = (c.serial && c.serial !== 'N/A' && c.serial.trim() !== '') ? c.serial.trim().toUpperCase() : null;
+        const compInstalls = (installations || []).filter((i) => {
+          const iHost = (i.computerHostname || '').trim().toUpperCase();
+          const iSerial = (i.computerSerial && i.computerSerial !== 'N/A' && i.computerSerial.trim() !== '') ? i.computerSerial.trim().toUpperCase() : null;
+          if (serialUpper && iSerial && serialUpper === iSerial) return true;
+          if (hostUpper && iHost && hostUpper === iHost) return true;
+          return false;
+        });
 
         const needCheckInstalls = compInstalls.filter((i) => {
           const isFoss = i.licenseType === 'FREE_OPEN_SOURCE' || i.invoiceStatus === 'NOT_APPLICABLE';
