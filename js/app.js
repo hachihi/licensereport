@@ -27,6 +27,8 @@
 
     // UI state
     const [activeTab, setActiveTab] = useState('HOME');
+    const [userMode, setUserMode] = useState('SIMPLE'); // 'SIMPLE' (Thông thường) or 'EXPERT' (Chuyên gia)
+    const [actionFilter, setActionFilter] = useState('ALL');
     const [showAdvancedMenu, setShowAdvancedMenu] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [uploadStatus, setUploadStatus] = useState({ message: '', type: 'info' });
@@ -497,11 +499,15 @@
         { className: "bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs print:hidden transition-colors duration-200" },
         React.createElement(
           "div",
-          { className: "w-full max-w-[98%] 2xl:max-w-[1780px] mx-auto px-3 sm:px-6 h-16 flex items-center justify-between" },
-          // Logo & Brand
+          { className: "w-full max-w-[98%] 2xl:max-w-[1780px] mx-auto px-3 sm:px-6 h-16 sm:h-18 flex items-center justify-between gap-2 sm:gap-4" },
+          // Logo & Brand (HACHIHI – KIỂM TRA BẢN QUYỀN PHẦN MỀM)
           React.createElement(
             "div",
-            { className: "flex items-center gap-3" },
+            {
+              className: "flex items-center gap-3 cursor-pointer shrink-0",
+              onClick: () => setActiveTab('HOME'),
+              title: "Về màn hình Tổng quan",
+            },
             React.createElement("img", {
               src: "./assets/logo.svg",
               alt: "Hachihi SAM Logo",
@@ -509,54 +515,115 @@
             }),
             React.createElement(
               "div",
-              null,
+              { className: "hidden sm:block" },
               React.createElement(
                 "h1",
-                { className: "text-base font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2" },
-                "Hachihi SAM Pro",
+                { className: "text-sm sm:text-base font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2 uppercase" },
+                "Hachihi – Kiểm Tra Bản Quyền Phần Mềm",
                 React.createElement(
                   "span",
-                  { className: "text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300" },
+                  { className: "text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 normal-case" },
                   "v2026.09"
                 )
               ),
               React.createElement(
                 "p",
-                { className: "text-[11px] text-slate-500 dark:text-slate-400" },
-                "Hệ Thống Kiểm Toán & Tối Ưu Bản Quyền Doanh Nghiệp"
+                { className: "text-[11px] text-slate-500 dark:text-slate-400 font-medium" },
+                "Kiểm tra phần mềm đang sử dụng và những vấn đề cần xử lý."
               )
             )
           ),
 
-          // Header Actions
+          // Navigation Bar (6 items: 🏠 Tổng quan | 🖥️ Máy tính | 📦 Phần mềm | ⚠️ Cần xử lý | 📄 Báo cáo | ⚙️ Nâng cao)
+          React.createElement(
+            "nav",
+            { className: "flex items-center gap-1 sm:gap-1.5 overflow-x-auto py-1 px-1 rounded-xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-2xs" },
+            [
+              { id: 'HOME', icon: '🏠', label: 'Tổng quan' },
+              { id: 'COMPUTERS', icon: '🖥️', label: 'Máy tính', count: computers.length },
+              { id: 'SOFTWARE', icon: '📦', label: 'Phần mềm', count: softwareGroups.length },
+              {
+                id: 'ACTION_ITEMS',
+                icon: '⚠️',
+                label: 'Cần xử lý',
+                count: installations.filter((i) => i.invoiceStatus === 'MISSING_INVOICE' && i.licenseType !== 'FREE_OPEN_SOURCE').length,
+                alert: true,
+              },
+              { id: 'EXECUTIVE_REPORT', icon: '📄', label: 'Báo cáo' },
+              { id: 'ADVANCED', icon: '⚙️', label: 'Nâng cao' },
+            ].map((tab) => {
+              const isActive =
+                activeTab === tab.id ||
+                (tab.id === 'ADVANCED' && ['OVERVIEW', 'SOFTWARE_MATRIX', 'MACHINE_AUDIT', 'FOSS_PLAN', 'CATALOG_CONFIG'].includes(activeTab));
+              return React.createElement(
+                "button",
+                {
+                  key: tab.id,
+                  onClick: () => {
+                    if (tab.id === 'ADVANCED' && activeTab === 'ADVANCED') {
+                      setShowAdvancedMenu(!showAdvancedMenu);
+                    } else {
+                      setActiveTab(tab.id);
+                      if (tab.id === 'ADVANCED') setShowAdvancedMenu(true);
+                      else setShowAdvancedMenu(false);
+                    }
+                  },
+                  className: `px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                    isActive
+                      ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-xs'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50'
+                  }`,
+                  title: `Chuyển sang ${tab.label}`,
+                },
+                React.createElement("span", { className: "text-sm" }, tab.icon),
+                React.createElement("span", null, tab.label),
+                tab.count !== undefined &&
+                  React.createElement(
+                    "span",
+                    {
+                      className: `text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                        tab.alert && tab.count > 0
+                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                          : isActive
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                          : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                      }`,
+                    },
+                    tab.count
+                  )
+              );
+            })
+          ),
+
+          // Header Actions (Right Controls)
           React.createElement(
             "div",
-            { className: "flex items-center gap-2 sm:gap-2.5" },
-            // Dark Mode Toggle
+            { className: "flex items-center gap-2 sm:gap-2.5 shrink-0" },
+
+            // Chế độ: Thông thường vs Chuyên gia Toggle
             React.createElement(
               "button",
               {
-                onClick: toggleTheme,
-                className: "p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer text-sm",
-                title: isDark ? "Chuyển sang Giao diện sáng" : "Chuyển sang Giao diện tối",
-              },
-              isDark ? "☀️" : "🌙"
-            ),
-            // Quick Button: Bảng Xử Lý File (Màn hình chính)
-            React.createElement(
-              "button",
-              {
-                onClick: () => setActiveTab('HOME'),
-                className: `px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 border ${
-                  activeTab === 'HOME'
-                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900 dark:border-slate-100 shadow-xs'
-                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                onClick: () => {
+                  const nextMode = userMode === 'SIMPLE' ? 'EXPERT' : 'SIMPLE';
+                  setUserMode(nextMode);
+                },
+                className: `px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 border shadow-2xs ${
+                  userMode === 'EXPERT'
+                    ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-500'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
                 }`,
-                title: "Về Trạm Nạp & Xử Lý File Kiểm Kê",
+                title: userMode === 'SIMPLE' ? "Chuyển sang Chế độ Chuyên Gia (Xem đầy đủ các trạm kỹ thuật)" : "Chuyển về Chế độ Thông Thường (Trợ lý đơn giản)",
               },
-              "📁 Bảng Xử Lý File"
+              React.createElement("span", null, userMode === 'SIMPLE' ? '👤' : '🛠️'),
+              React.createElement(
+                "span",
+                { className: "hidden md:inline" },
+                userMode === 'SIMPLE' ? 'Chế độ thông thường' : 'Chế độ chuyên gia'
+              )
             ),
-            // Menu "Các Cài Đặt Nâng Cao" (Gom 1. Báo cáo tổng quan, 2. Ma trận phần mềm, 3. Kiểm toán từng máy, 4. Kế hoạch FOSS, 5. Quy định cài đặt)
+
+            // Menu Cài Đặt Nâng Cao Dropdown Button
             React.createElement(
               "div",
               { className: "sam-dropdown", ref: advancedMenuRef },
@@ -564,29 +631,15 @@
                 "button",
                 {
                   onClick: () => setShowAdvancedMenu(!showAdvancedMenu),
-                  className: `px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 border ${
-                    activeTab !== 'HOME'
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                      : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  className: `p-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 border ${
+                    showAdvancedMenu
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                   }`,
-                  title: "Mở menu Các Cài Đặt Nâng Cao",
+                  title: "Xem các cài đặt & phân hệ nâng cao",
                 },
-                "⚙️ Các Cài Đặt Nâng Cao",
-                activeTab !== 'HOME' &&
-                  React.createElement(
-                    "span",
-                    { className: "text-[10px] px-1.5 py-0.5 rounded bg-white/20 font-semibold" },
-                    activeTab === 'OVERVIEW'
-                      ? '1. Tổng quan'
-                      : activeTab === 'SOFTWARE_MATRIX'
-                      ? '2. Ma trận'
-                      : activeTab === 'MACHINE_AUDIT'
-                      ? '3. Kiểm toán'
-                      : activeTab === 'FOSS_PLAN'
-                      ? '4. FOSS'
-                      : '5. Quy định'
-                  ),
-                React.createElement("span", { className: "text-[10px] opacity-75" }, showAdvancedMenu ? "▲" : "▼")
+                "⚙️",
+                React.createElement("span", { className: "text-[10px] opacity-75 hidden lg:inline" }, showAdvancedMenu ? "▲" : "▼")
               ),
               showAdvancedMenu &&
                 React.createElement(
@@ -603,15 +656,16 @@
                     React.createElement(
                       "span",
                       { className: "text-[10px] text-blue-600 dark:text-blue-400 font-bold" },
-                      "5 Phân Hệ"
+                      "Chuyên Sâu"
                     )
                   ),
                   [
-                    { id: 'OVERVIEW', icon: '📊', label: '1. Báo Cáo Tổng Quan', badge: `${metrics.complianceScore}% Tuân thủ` },
-                    { id: 'SOFTWARE_MATRIX', icon: '📑', label: '2. Ma Trận Phần Mềm', badge: `${softwareGroups.length} nhóm` },
-                    { id: 'MACHINE_AUDIT', icon: '💻', label: '3. Kiểm Toán Từng Máy', badge: `${computers.length} máy` },
-                    { id: 'FOSS_PLAN', icon: '💡', label: '4. Kế Hoạch FOSS (0đ)', badge: `${metrics.replaceFoss} vị trí` },
-                    { id: 'CATALOG_CONFIG', icon: '⚙️', label: '5. Quy Định Cài Đặt', badge: `${catalogRules.length} quy tắc` },
+                    { id: 'ADVANCED', icon: '🗂️', label: 'Trạm Xử Lý & Gộp File (3 Sheet)', badge: `${loadedFiles.length} file` },
+                    { id: 'OVERVIEW', icon: '📊', label: '1. Báo Cáo Tổng Quan Kỹ Thuật', badge: `${metrics.complianceScore}%` },
+                    { id: 'SOFTWARE_MATRIX', icon: '📑', label: '2. Ma Trận Phần Mềm Chi Tiết', badge: `${softwareGroups.length} nhóm` },
+                    { id: 'MACHINE_AUDIT', icon: '💻', label: '3. Kiểm Toán Từng Máy (Serial/Model)', badge: `${computers.length} máy` },
+                    { id: 'FOSS_PLAN', icon: '💡', label: '4. Kế Hoạch Thay Thế FOSS (0đ)', badge: `${metrics.replaceFoss} vị trí` },
+                    { id: 'CATALOG_CONFIG', icon: '⚙️', label: '5. Quy Định Cài Đặt & Từ Điển', badge: `${catalogRules.length} quy tắc` },
                   ].map((item) =>
                     React.createElement(
                       "button",
@@ -641,39 +695,31 @@
                         item.badge
                       )
                     )
-                  ),
-                  React.createElement("div", { className: "my-1 border-t border-slate-100 dark:border-slate-800" }),
-                  React.createElement(
-                    "button",
-                    {
-                      onClick: () => {
-                        setActiveTab('HOME');
-                        setShowAdvancedMenu(false);
-                      },
-                      className: `sam-dropdown-item ${activeTab === 'HOME' ? 'active' : ''}`,
-                    },
-                    React.createElement(
-                      "div",
-                      { className: "flex items-center gap-2" },
-                      React.createElement("span", { className: "text-base" }, "📁"),
-                      React.createElement("span", { className: "font-bold text-xs" }, "Bảng Xử Lý File (Màn Hình Chính)")
-                    ),
-                    React.createElement(
-                      "span",
-                      { className: "text-[10px] text-blue-600 dark:text-blue-400 font-bold" },
-                      "Trang chủ"
-                    )
                   )
                 )
             ),
-            // Print Modal Button (Ngang hàng với Các Cài Đặt Nâng Cao)
+
+            // Print Modal Button (In Báo Cáo BGĐ)
             React.createElement(
               "button",
               {
                 onClick: () => setShowPrintReportModal(true),
-                className: "px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-xs transition cursor-pointer flex items-center gap-1.5",
+                className: "px-3 sm:px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer flex items-center gap-1.5",
+                title: "Mở hộp thoại in báo cáo cho Ban Giám Đốc",
               },
-              "🖨️ In Báo Cáo (BGĐ)"
+              React.createElement("span", null, "🖨️"),
+              React.createElement("span", { className: "hidden sm:inline" }, "In Báo Cáo (BGĐ)")
+            ),
+
+            // Dark Mode Toggle
+            React.createElement(
+              "button",
+              {
+                onClick: toggleTheme,
+                className: "p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer text-sm",
+                title: isDark ? "Chuyển sang Giao diện sáng" : "Chuyển sang Giao diện tối",
+              },
+              isDark ? "☀️" : "🌙"
             )
           )
         )
@@ -695,8 +741,53 @@
         "main",
         { className: "w-full max-w-[98%] 2xl:max-w-[1780px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 space-y-8 lg:space-y-12" },
 
-        // Main Container Content
-        activeTab === 'HOME'
+        // Main Container Content: Assistant Views or Technical Dashboard or Reports
+        activeTab === 'HOME' && userMode === 'SIMPLE'
+          ? React.createElement(global.SAM_ASSISTANT_HOME.AssistantHomeView, {
+              computers,
+              installations,
+              softwareGroups,
+              loadedFiles,
+              onUploadFiles: (files) => handleInventoryUpload(files, false),
+              onAppendFiles: (files) => handleInventoryUpload(files, true),
+              setActiveTab,
+              setActionFilter,
+              fileInputRef,
+              appendFileInputRef,
+              formatVND: UTILS.formatVND,
+            })
+          : activeTab === 'COMPUTERS'
+          ? React.createElement(global.SAM_ASSISTANT_COMPUTERS.AssistantComputersView, {
+              computers,
+              installations,
+              onUpdateInvoiceStatus: updateInvoiceStatus,
+            })
+          : activeTab === 'SOFTWARE'
+          ? React.createElement(global.SAM_ASSISTANT_SOFTWARE.AssistantSoftwareView, {
+              softwareGroups,
+              installations,
+              onUpdateInvoiceStatus: updateInvoiceStatus,
+              formatVND: UTILS.formatVND,
+            })
+          : activeTab === 'ACTION_ITEMS'
+          ? React.createElement(global.SAM_ASSISTANT_ACTIONS.AssistantActionsView, {
+              softwareGroups,
+              installations,
+              initialFilter: actionFilter,
+              onUpdateInvoiceStatus: updateInvoiceStatus,
+              formatVND: UTILS.formatVND,
+              setActiveTab,
+            })
+          : activeTab === 'EXECUTIVE_REPORT'
+          ? React.createElement(global.SAM_ASSISTANT_EXECUTIVE.AssistantExecutiveView, {
+              computers,
+              installations,
+              softwareGroups,
+              metrics,
+              formatVND: UTILS.formatVND,
+              onTriggerPrint: () => setShowPrintReportModal(true),
+            })
+          : (activeTab === 'HOME' && userMode === 'EXPERT') || activeTab === 'ADVANCED'
           ? React.createElement(
               "div",
               { className: "space-y-8 lg:space-y-12 animate-fadeIn" },
