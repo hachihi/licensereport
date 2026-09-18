@@ -750,6 +750,7 @@
               loadedFiles,
               onUploadFiles: (files) => handleInventoryUpload(files, false),
               onAppendFiles: (files) => handleInventoryUpload(files, true),
+              onDownloadTemplate: handleDownloadTemplate,
               setActiveTab,
               setActionFilter,
               fileInputRef,
